@@ -111,6 +111,42 @@ public class RecordCommanderTests
     }
 
     [Fact]
+    public void UpdateLanguage_ShouldUpdateExistingRecord_v2()
+    {
+        var context = new TestContext();
+        // Add a language record.
+        RecordCommandRegistry.Run(context, "add language en");
+        // Update it with a wrong name.
+        RecordCommandRegistry.Run(context, "add language en Englsh");
+        // Then update it with the correct name.
+        RecordCommandRegistry.Run(context, "add language en English");
+
+        Assert.Single(context.Languages);
+        var lang = context.Languages.First();
+        Assert.Equal("en", lang.Key, ignoreCase: true);
+        Assert.Equal("English", lang.Name);
+    }
+
+    [Fact]
+    public void UpdateLanguage_ShouldUpdateExistingRecord_ViaRunMany()
+    {
+        var context = new TestContext();
+        // Add a language record.
+        // Update it with a wrong name.
+        // Then update it with the correct name.
+        RecordCommandRegistry.RunMany(context, """
+                                               add language en English
+                                               add language en Englsh
+                                               add language en English
+                                               """);
+
+        Assert.Single(context.Languages);
+        var lang = context.Languages.First();
+        Assert.Equal("en", lang.Key, ignoreCase: true);
+        Assert.Equal("English", lang.Name);
+    }
+
+    [Fact]
     public void InvalidCommand_MissingTokens_ShouldThrowException()
     {
         var context = new TestContext();

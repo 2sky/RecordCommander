@@ -145,6 +145,21 @@ public static class RecordCommandRegistry
     }
 
     /// <summary>
+    /// Parses and runs multiple commands from a string.
+    /// </summary>
+    /// <typeparam name="TContext">The type of the context (e.g. MyData).</typeparam>
+    /// <param name="context">The context instance.</param>
+    /// <param name="commands">The commands string (separated by newlines).</param>
+    public static void RunMany<TContext>(TContext context, string commands)
+    {
+        ArgumentNullException.ThrowIfNull(context);
+
+        var lines = commands.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries);
+        foreach (var line in lines)
+            Run(context, line);
+    }
+
+    /// <summary>
     /// Converts a string value into a value of the specified type.
     /// Special handling is included for array types (expecting a JSON–like format).
     /// </summary>
