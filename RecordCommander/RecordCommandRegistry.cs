@@ -64,15 +64,15 @@ public static class RecordCommandRegistry
         // For now, we only support the "add" action.
         var action = tokens[0].ToLowerInvariant();
         if (action != "add")
-            throw new ArgumentException($"Action '{action}' not supported", nameof(command));
+            throw new NotSupportedException($"Action '{action}' not supported");
 
         if (tokens.Count < 3)
-            throw new ArgumentException("Command must have at least 3 tokens: 'add', type, key", nameof(command));
+            throw new NotSupportedException("Command must have at least 3 tokens: 'add', type, key");
 
         var typeName = tokens[1];
         // TODO: Handle aliases for types.
         if (!_registrations.TryGetValue(typeName, out var registration))
-            throw new ArgumentException($"Type '{typeName}' is not registered", nameof(command));
+            throw new NotSupportedException($"Type '{typeName}' is not registered");
 
         var uniqueKeyValueStr = tokens[2];
 
