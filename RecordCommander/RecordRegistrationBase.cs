@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Reflection;
+﻿using System.Reflection;
 
 namespace RecordCommander;
 
@@ -23,6 +22,7 @@ public abstract class RecordRegistrationBase
     /// </summary>
     public PropertyInfo UniqueKeyProperty { get; }
 
+    // TODO: Handle aliases for properties.
     /// <summary>
     /// All public, settable properties (used to resolve named arguments).
     /// </summary>
@@ -44,5 +44,13 @@ public abstract class RecordRegistrationBase
             .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
     }
 
-    public abstract IList GetCollection(object context);
+    /// <summary>
+    /// Find or create a record in the given context.
+    /// </summary>
+    public abstract object FindOrCreateRecord(object context, string uniqueKey);
+
+    /// <summary>
+    /// Add an alias for this command.
+    /// </summary>
+    public RecordRegistrationBase AddAlias(string alias) => RecordCommandRegistry.AddAlias(CommandName, alias);
 }

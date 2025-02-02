@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Reflection;
+﻿using System.Reflection;
 
 namespace RecordCommander;
 
@@ -20,16 +19,37 @@ public class RecordRegistration<TContext, TRecord> : RecordRegistrationBase
         _collectionAccessor = collectionAccessor;
     }
 
-    /// <summary>
-    /// Retrieves the collection (for TRecord) from the given context.
-    /// </summary>
-    public override IList GetCollection(object context)
+    /// <inheritdoc />
+    public override object FindOrCreateRecord(object context, string uniqueKey)
     {
         ArgumentNullException.ThrowIfNull(context);
 
         if (context is not TContext ctx)
             throw new ArgumentException("Invalid context type", nameof(context));
 
-        return (IList)_collectionAccessor(ctx);
+        // Retrieve the collection from the context.
+        var collection = _collectionAccessor(ctx);
+
+        // Try to find an existing record (by comparing the unique key).
+        TRecord? record = default;
+        foreach (var item in collection)
+        {
+            var keyVal = UniqueKeyProperty.GetValue(item) as string;
+            if (string.Equals(keyVal, uniqueKey, StringComparison.OrdinalIgnoreCase))
+            {
+                record = item;
+                break;
+            }
+        }
+
+        if (record is null)
+        {
+            // Create a new record if none exists.
+            record = new();
+            UniqueKeyProperty.SetValue(record, uniqueKey);
+            collection.Add(record);
+        }
+
+        return record;
     }
 }

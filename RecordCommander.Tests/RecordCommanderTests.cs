@@ -26,6 +26,9 @@ public class RecordCommanderTests
     // If registration already exists, we catch and ignore the exception.
     static RecordCommanderTests()
     {
+        if (RecordCommandRegistry.IsRegistered("language"))
+            return;
+
         try
         {
             RecordCommandRegistry.Register<TestContext, Language>(
@@ -34,6 +37,9 @@ public class RecordCommanderTests
                 uniqueKeySelector: x => x.Key,
                 positionalPropertySelectors: [x => x.Name]
             );
+
+            // Add an alias for the "language" command.
+            RecordCommandRegistry.AddAlias("language", "lang");
         }
         catch { /* Ignore if already registered */ }
 
@@ -45,6 +51,9 @@ public class RecordCommanderTests
                 uniqueKeySelector: x => x.Code,
                 positionalPropertySelectors: [x => x.Name, x => x.SpokenLanguages]
             );
+
+            // Add an alias for the "country" command.
+            RecordCommandRegistry.AddAlias("country", "ctr");
         }
         catch { /* Ignore if already registered */ }
     }
@@ -54,6 +63,18 @@ public class RecordCommanderTests
     {
         var context = new TestContext();
         RecordCommandRegistry.Run(context, "add language en English");
+
+        Assert.Single(context.Languages);
+        var lang = context.Languages.First();
+        Assert.Equal("en", lang.Key, ignoreCase: true);
+        Assert.Equal("English", lang.Name);
+    }
+
+    [Fact]
+    public void AddLanguage_ValidInput_ShouldCreateLanguageRecord_ViaAlias()
+    {
+        var context = new TestContext();
+        RecordCommandRegistry.Run(context, "add lang en English");
 
         Assert.Single(context.Languages);
         var lang = context.Languages.First();
@@ -138,6 +159,25 @@ public class RecordCommanderTests
                                                add language en English
                                                add language en Englsh
                                                add language en English
+                                               """);
+
+        Assert.Single(context.Languages);
+        var lang = context.Languages.First();
+        Assert.Equal("en", lang.Key, ignoreCase: true);
+        Assert.Equal("English", lang.Name);
+    }
+
+    [Fact]
+    public void UpdateLanguage_ShouldUpdateExistingRecord_ViaRunManyAndAlias()
+    {
+        var context = new TestContext();
+        // Add a language record.
+        // Update it with a wrong name.
+        // Then update it with the correct name.
+        RecordCommandRegistry.RunMany(context, """
+                                               add lang en
+                                               add lang en Englsh
+                                               add lang en English
                                                """);
 
         Assert.Single(context.Languages);

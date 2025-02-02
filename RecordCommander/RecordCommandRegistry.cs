@@ -13,6 +13,11 @@ public static class RecordCommandRegistry
         new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// Checks if a command is registered.
+    /// </summary>
+    public static bool IsRegistered(string commandName) => _registrations.ContainsKey(commandName);
+
+    /// <summary>
     /// Registers a record type with its configuration.
     /// </summary>
     /// <typeparam name="TContext">Type of the context (for example, your data container).</typeparam>
@@ -21,7 +26,7 @@ public static class RecordCommandRegistry
     /// <param name="collectionAccessor">A lambda to extract the collection (e.g. ctx => ctx.Languages).</param>
     /// <param name="uniqueKeySelector">An expression to select the unique key property (e.g. x => x.Key).</param>
     /// <param name="positionalPropertySelectors">Expressions for additional (positional) properties.</param>
-    public static void Register<TContext, TRecord>(
+    public static RecordRegistration<TContext, TRecord> Register<TContext, TRecord>(
         string commandName,
         Func<TContext, IList<TRecord>> collectionAccessor,
         Expression<Func<TRecord, string>> uniqueKeySelector,
@@ -34,6 +39,23 @@ public static class RecordCommandRegistry
         var positionalProps = positionalPropertySelectors.Select(GetPropertyInfo).ToList();
         var registration = new RecordRegistration<TContext, TRecord>(commandName, collectionAccessor, uniqueKeyProp, positionalProps);
         _registrations[commandName] = registration;
+
+        // TODO: Could we determine aliases via attributes on the class or properties?
+
+        return registration;
+    }
+
+    /// <summary>
+    /// Adds an alias for a command.
+    /// </summary>
+    public static RecordRegistrationBase AddAlias(string commandName, string alias)
+    {
+        if (!_registrations.TryGetValue(commandName, out var registration))
+            throw new ArgumentException($"Command '{commandName}' is not registered", nameof(commandName));
+
+        _registrations[alias] = registration;
+
+        return registration;
     }
 
     // Helper to extract a PropertyInfo from an expression.
@@ -74,7 +96,7 @@ public static class RecordCommandRegistry
         if (!_registrations.TryGetValue(typeName, out var registration))
             throw new NotSupportedException($"Type '{typeName}' is not registered");
 
-        var uniqueKeyValueStr = tokens[2];
+        var uniqueKey = tokens[2];
 
         // Process the rest of the tokens.
         var positionalArgs = new List<string>();
@@ -100,27 +122,7 @@ public static class RecordCommandRegistry
 
         // TODO: Collection could also be an IQueryable, so we could use LINQ to query it.
 
-        // Retrieve the collection from the context.
-        var collection = registration.GetCollection(context);
-
-        // Try to find an existing record (by comparing the unique key).
-        object? record = null;
-        foreach (var item in collection)
-        {
-            var keyVal = registration.UniqueKeyProperty.GetValue(item) as string;
-            if (string.Equals(keyVal, uniqueKeyValueStr, StringComparison.OrdinalIgnoreCase))
-            {
-                record = item;
-                break;
-            }
-        }
-        if (record is null)
-        {
-            // Create a new record if none exists.
-            record = Activator.CreateInstance(registration.RecordType);
-            registration.UniqueKeyProperty.SetValue(record, uniqueKeyValueStr);
-            collection.Add(record);
-        }
+        var record = registration.FindOrCreateRecord(context, uniqueKey);
 
         // Update the record with positional arguments.
         for (var i = 0; i < registration.PositionalProperties.Count && i < positionalArgs.Count; i++)
@@ -166,6 +168,7 @@ public static class RecordCommandRegistry
     private static object ConvertToType(string value, Type targetType)
     {
         // TODO: Handle custom conversions (e.g. enums, DateTime, etc.)
+        // TODO: Handle nullable types
 
         if (targetType == typeof(string))
             return value;
@@ -202,11 +205,17 @@ public static class RecordCommandRegistry
                     json = json.Replace('\'', '"');
                 }
                 var elementType = targetType.GetElementType();
+                if (elementType is null)
+                    throw new ArgumentException("Invalid array type", nameof(targetType));
+
                 var listType = typeof(List<>).MakeGenericType(elementType);
                 try
                 {
                     var deserialized = System.Text.Json.JsonSerializer.Deserialize(json, listType);
                     var toArrayMethod = listType.GetMethod("ToArray");
+                    if (toArrayMethod is null)
+                        throw new ArgumentException("Failed to find ToArray method", nameof(targetType));
+
                     return toArrayMethod.Invoke(deserialized, null);
                 }
                 catch (Exception ex)
@@ -214,10 +223,8 @@ public static class RecordCommandRegistry
                     throw new ArgumentException($"Failed to parse array value: {value}", ex);
                 }
             }
-            else
-            {
-                throw new ArgumentException($"Value '{value}' is not a valid array representation");
-            }
+
+            throw new ArgumentException($"Value '{value}' is not a valid array representation, expected JSON array syntax");
         }
 
         // For primitives (int, bool, etc.) use ChangeType.
@@ -230,7 +237,6 @@ public static class RecordCommandRegistry
             throw new ArgumentException($"Failed to convert value '{value}' to type {targetType.Name}", ex);
         }
     }
-
 
     /// <summary>
     /// A simple tokenizer that splits a command string into tokens.
