@@ -16,6 +16,11 @@
     <PackageProjectUrl>https://github.com/stevehansen/RecordCommander</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
+    <PackageIcon>logo-128x128.png</PackageIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\logo-128x128.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
 </Project>
