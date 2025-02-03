@@ -289,4 +289,48 @@ public class RecordCommanderTests
         );
         Assert.Contains("is not a valid array representation", ex.Message);
     }
+
+    [Fact]
+    public void Generation_UsingDefaultOptions()
+    {
+        var options = new CommandGenerationOptions();
+        var lang = new Language { Key = "en", Name = "English" };
+        var cmd = RecordCommandRegistry<TestContext>.GenerateCommand(lang, options);
+        Assert.Equal("add language en English", cmd);
+    }
+
+    [Fact]
+    public void Generation_UsingPositionalProperties()
+    {
+        var options = new CommandGenerationOptions(usePositionalProperties: true);
+        var lang = new Language { Key = "en", Name = "English" };
+        var cmd = RecordCommandRegistry<TestContext>.GenerateCommand(lang, options);
+        Assert.Equal("add language en English", cmd);
+    }
+
+    [Fact]
+    public void Generation_UsingNamedArguments()
+    {
+        var options = new CommandGenerationOptions(usePositionalProperties: false);
+        var lang = new Language { Key = "en", Name = "English" };
+        var cmd = RecordCommandRegistry<TestContext>.GenerateCommand(lang, options);
+        Assert.Equal("add language en --Name=English", cmd);
+    }
+
+    [Fact]
+    public void Generation_UsingAliases()
+    {
+        var options = new CommandGenerationOptions(preferAliases: true);
+        var lang = new Language { Key = "en", Name = "English" };
+        var cmd = RecordCommandRegistry<TestContext>.GenerateCommand(lang, options);
+        Assert.Equal("add lang en English", cmd);
+    }
+
+    [Fact]
+    public void Generation_UsingSpaces()
+    {
+        var lang = new Language { Key = "en", Name = "English Language" };
+        var cmd = RecordCommandRegistry<TestContext>.GenerateCommand(lang);
+        Assert.Equal("add language en \"English Language\"", cmd);
+    }
 }

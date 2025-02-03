@@ -48,7 +48,7 @@ public static class RecordCommandRegistry
 /// <summary>
 /// The registry that holds all registered record types and parses commands.
 /// </summary>
-public static class RecordCommandRegistry<TContext>
+public static partial class RecordCommandRegistry<TContext>
 {
     // TODO: Should we have an option to freeze/lock the registry to prevent further registrations?
 
@@ -76,9 +76,9 @@ public static class RecordCommandRegistry<TContext>
         where TRecord : new()
     {
         // Get the unique key property info from the expression.
-        var uniqueKeyProp = GetPropertyInfo(uniqueKeySelector);
+        var uniqueKeyProp = Helpers.GetPropertyInfo(uniqueKeySelector);
         // Get positional property infos.
-        var positionalProps = positionalPropertySelectors.Select(GetPropertyInfo).ToList();
+        var positionalProps = positionalPropertySelectors.Select(Helpers.GetPropertyInfo).ToList();
         var registration = new RecordRegistration<TContext, TRecord>(commandName, collectionAccessor, uniqueKeyProp, positionalProps);
         _registrations[commandName] = registration;
 
@@ -102,17 +102,6 @@ public static class RecordCommandRegistry<TContext>
         return registration;
     }
 
-    // Helper to extract a PropertyInfo from an expression.
-    private static PropertyInfo GetPropertyInfo<T, TProp>(Expression<Func<T, TProp>> expr)
-    {
-        return expr.Body switch
-        {
-            MemberExpression memberExpr => (PropertyInfo)memberExpr.Member,
-            UnaryExpression { Operand: MemberExpression memberExpr2 } => (PropertyInfo)memberExpr2.Member,
-            _ => throw new ArgumentException("Invalid expression", nameof(expr)),
-        };
-    }
-
     /// <summary>
     /// Parses and runs a command string (e.g. "add language nl Dutch").
     /// </summary>
@@ -122,7 +111,7 @@ public static class RecordCommandRegistry<TContext>
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var tokens = Tokenize(command);
+        var tokens = Helpers.Tokenize(command);
         if (tokens.Count == 0)
             throw new ArgumentException("Command is empty", nameof(command));
 
@@ -135,7 +124,6 @@ public static class RecordCommandRegistry<TContext>
             throw new NotSupportedException("Command must have at least 3 tokens: 'add', type, key");
 
         var typeName = tokens[1];
-        // TODO: Handle aliases for types.
         if (!_registrations.TryGetValue(typeName, out var registration))
             throw new NotSupportedException($"Type '{typeName}' is not registered");
 
@@ -283,12 +271,28 @@ public static class RecordCommandRegistry<TContext>
             throw new ArgumentException($"Failed to convert value '{value}' to type {targetType.Name}", ex);
         }
     }
+}
+
+file static class Helpers
+{
+    /// <summary>
+    /// Extracts the PropertyInfo from an expression.
+    /// </summary>
+    public static PropertyInfo GetPropertyInfo<T, TProp>(Expression<Func<T, TProp>> expr)
+    {
+        return expr.Body switch
+        {
+            MemberExpression memberExpr => (PropertyInfo)memberExpr.Member,
+            UnaryExpression { Operand: MemberExpression memberExpr2 } => (PropertyInfo)memberExpr2.Member,
+            _ => throw new ArgumentException("Invalid expression", nameof(expr)),
+        };
+    }
 
     /// <summary>
     /// A simple tokenizer that splits a command string into tokens.
     /// Supports quotes (single or double) and simple escape sequences.
     /// </summary>
-    private static List<string> Tokenize(string input)
+    public static List<string> Tokenize(string input)
     {
         if (string.IsNullOrWhiteSpace(input))
             return [];

@@ -50,7 +50,7 @@ You would register them as follows:
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using RecordCommander; // Use your namespace
+using RecordCommander;
 
 // Register the Language record.
 RecordCommandRegistry.Register<MyData, Language>(
@@ -69,6 +69,17 @@ RecordCommandRegistry.Register<MyData, Country>(
 );
 ```
 
+The AliasAttribute can be used on classes and properties to provide alternative names for the command and properties. For example:
+```csharp
+[Alias("lang")]
+public class Language
+{
+    public string Key { get; set; }
+    [Alias("n")]
+    public string Name { get; set; }
+}
+```
+
 ### Running Commands
 
 After registration, you can execute commands that create or update records in your data context. For example:
@@ -83,6 +94,8 @@ RecordCommandRegistry.Run(context, "add language fr French");
 RecordCommandRegistry.Run(context, "add country be Belgium");
 // Update an existing record using named arguments:
 RecordCommandRegistry.Run(context, "add country be --SpokenLanguages=['nl','fr']");
+// Or using the aliases:
+RecordCommandRegistry.Run(context, "add lang de --n=German");
 ```
 
 ### Example Output
@@ -168,6 +181,22 @@ You can use this library to reproduce bugs in your application by creating the s
 ### Documentation
 
 You can use this library to generate sample data for your documentation. So that the user reading your documentation can copy and paste the commands to seed the data.
+
+### Generating commands
+
+You can use this library to generate commands from existing records. Check the following test:
+
+```csharp
+[Fact]
+public void Generation_UsingSpaces()
+{
+    var lang = new Language { Key = "en", Name = "English Language" };
+    var cmd = RecordCommandRegistry<TestContext>.GenerateCommand(lang);
+    Assert.Equal("add language en \"English Language\"", cmd);
+}
+```
+
+This could be used for exporting data from your application.
 
 ## Limitations (at the moment))
 
