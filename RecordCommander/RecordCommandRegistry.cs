@@ -50,6 +50,8 @@ public static class RecordCommandRegistry
 /// </summary>
 public static class RecordCommandRegistry<TContext>
 {
+    // TODO: Should we have an option to freeze/lock the registry to prevent further registrations?
+
     private static readonly Dictionary<string, RecordRegistration<TContext>> _registrations =
         new(StringComparer.OrdinalIgnoreCase);
 
@@ -177,11 +179,9 @@ public static class RecordCommandRegistry<TContext>
         // Update with named arguments.
         foreach (var kvp in namedArgs)
         {
-            // TODO: Handle aliases for property names.
             if (!registration.AllProperties.TryGetValue(kvp.Key, out var prop))
-            {
                 throw new ArgumentException($"Property '{kvp.Key}' does not exist on type '{registration.RecordType.Name}'");
-            }
+
             var converted = ConvertToType(kvp.Value, prop.PropertyType);
             prop.SetValue(record, converted);
         }

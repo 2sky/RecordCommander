@@ -25,11 +25,13 @@ public abstract class RecordRegistration<TContext>
     /// <summary>
     /// All public, settable properties (used to resolve named arguments).
     /// </summary>
+    // TODO: Should we use read-only versions for this for safety?
     public Dictionary<string, PropertyInfo> AllProperties { get; }
 
     /// <summary>
     /// Positional properties (in order, after the unique key).
     /// </summary>
+    // TODO: Should we use read-only versions for this for safety?
     public List<PropertyInfo> PositionalProperties { get; }
 
     protected RecordRegistration(string commandName, Type recordType, PropertyInfo uniqueKeyProperty, List<PropertyInfo> positionalProperties)
