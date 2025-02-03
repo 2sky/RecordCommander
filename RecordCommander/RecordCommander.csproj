@@ -9,7 +9,7 @@
     <!-- NuGet package settings -->
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>RecordCommander</PackageId>
-    <Version>0.2.0</Version>
+    <Version>0.9.0</Version>
     <Authors>Steve Hansen</Authors>
     <Company>Hansen Consultancy</Company>
     <Description>A lightweight C# library that enables command-based seeding and updating of records.</Description>
