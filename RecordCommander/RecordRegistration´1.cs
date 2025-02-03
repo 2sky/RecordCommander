@@ -5,7 +5,7 @@ namespace RecordCommander;
 /// <summary>
 /// Base class for storing registration details for a record type.
 /// </summary>
-public abstract class RecordRegistrationBase
+public abstract class RecordRegistration<TContext>
 {
     /// <summary>
     /// The command name used to identify this record type.
@@ -33,7 +33,7 @@ public abstract class RecordRegistrationBase
     /// </summary>
     public List<PropertyInfo> PositionalProperties { get; }
 
-    protected RecordRegistrationBase(string commandName, Type recordType, PropertyInfo uniqueKeyProperty, List<PropertyInfo> positionalProperties)
+    protected RecordRegistration(string commandName, Type recordType, PropertyInfo uniqueKeyProperty, List<PropertyInfo> positionalProperties)
     {
         CommandName = commandName;
         RecordType = recordType;
@@ -47,10 +47,10 @@ public abstract class RecordRegistrationBase
     /// <summary>
     /// Find or create a record in the given context.
     /// </summary>
-    public abstract object FindOrCreateRecord(object context, string uniqueKey);
+    public abstract object FindOrCreateRecord(TContext context, string uniqueKey);
 
     /// <summary>
     /// Add an alias for this command.
     /// </summary>
-    public RecordRegistrationBase AddAlias(string alias) => RecordCommandRegistry.AddAlias(CommandName, alias);
+    public RecordRegistration<TContext> AddAlias(string alias) => RecordCommandRegistry<TContext>.AddAlias(CommandName, alias);
 }

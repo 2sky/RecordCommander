@@ -26,7 +26,7 @@ public class RecordCommanderTests
     // If registration already exists, we catch and ignore the exception.
     static RecordCommanderTests()
     {
-        if (RecordCommandRegistry.IsRegistered("language"))
+        if (RecordCommandRegistry<TestContext>.IsRegistered("language"))
             return;
 
         try
@@ -39,7 +39,7 @@ public class RecordCommanderTests
             );
 
             // Add an alias for the "language" command.
-            RecordCommandRegistry.AddAlias("language", "lang");
+            RecordCommandRegistry<TestContext>.AddAlias("language", "lang");
         }
         catch { /* Ignore if already registered */ }
 
@@ -53,7 +53,7 @@ public class RecordCommanderTests
             );
 
             // Add an alias for the "country" command.
-            RecordCommandRegistry.AddAlias("country", "ctr");
+            RecordCommandRegistry<TestContext>.AddAlias("country", "ctr");
         }
         catch { /* Ignore if already registered */ }
     }

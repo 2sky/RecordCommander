@@ -9,14 +9,6 @@ namespace RecordCommander;
 /// </summary>
 public static class RecordCommandRegistry
 {
-    private static readonly Dictionary<string, RecordRegistrationBase> _registrations =
-        new(StringComparer.OrdinalIgnoreCase);
-
-    /// <summary>
-    /// Checks if a command is registered.
-    /// </summary>
-    public static bool IsRegistered(string commandName) => _registrations.ContainsKey(commandName);
-
     /// <summary>
     /// Registers a record type with its configuration.
     /// </summary>
@@ -27,6 +19,54 @@ public static class RecordCommandRegistry
     /// <param name="uniqueKeySelector">An expression to select the unique key property (e.g. x => x.Key).</param>
     /// <param name="positionalPropertySelectors">Expressions for additional (positional) properties.</param>
     public static RecordRegistration<TContext, TRecord> Register<TContext, TRecord>(
+        string commandName,
+        Func<TContext, IList<TRecord>> collectionAccessor,
+        Expression<Func<TRecord, string>> uniqueKeySelector,
+        params Expression<Func<TRecord, object>>[] positionalPropertySelectors)
+        where TRecord : new()
+    {
+        return RecordCommandRegistry<TContext>.Register(commandName, collectionAccessor, uniqueKeySelector, positionalPropertySelectors);
+    }
+
+    /// <summary>
+    /// Parses and runs a command string (e.g. "add language nl Dutch").
+    /// </summary>
+    /// <typeparam name="TContext">Type of the context (for example, your data container).</typeparam>
+    /// <param name="context">The context instance.</param>
+    /// <param name="command">The command string.</param>
+    public static void Run<TContext>(TContext context, string command) => RecordCommandRegistry<TContext>.Run(context, command);
+
+    /// <summary>
+    /// Parses and runs multiple commands from a string.
+    /// </summary>
+    /// <typeparam name="TContext">Type of the context (for example, your data container).</typeparam>
+    /// <param name="context">The context instance.</param>
+    /// <param name="commands">The commands string (separated by newlines).</param>
+    public static void RunMany<TContext>(TContext context, string commands) => RecordCommandRegistry<TContext>.RunMany(context, commands);
+}
+
+/// <summary>
+/// The registry that holds all registered record types and parses commands.
+/// </summary>
+public static class RecordCommandRegistry<TContext>
+{
+    private static readonly Dictionary<string, RecordRegistration<TContext>> _registrations =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Checks if a command is registered.
+    /// </summary>
+    public static bool IsRegistered(string commandName) => _registrations.ContainsKey(commandName);
+
+    /// <summary>
+    /// Registers a record type with its configuration.
+    /// </summary>
+    /// <typeparam name="TRecord">Record type (for example, Language or Country).</typeparam>
+    /// <param name="commandName">The command token to use (e.g. "language").</param>
+    /// <param name="collectionAccessor">A lambda to extract the collection (e.g. ctx => ctx.Languages).</param>
+    /// <param name="uniqueKeySelector">An expression to select the unique key property (e.g. x => x.Key).</param>
+    /// <param name="positionalPropertySelectors">Expressions for additional (positional) properties.</param>
+    public static RecordRegistration<TContext, TRecord> Register<TRecord>(
         string commandName,
         Func<TContext, IList<TRecord>> collectionAccessor,
         Expression<Func<TRecord, string>> uniqueKeySelector,
@@ -48,7 +88,7 @@ public static class RecordCommandRegistry
     /// <summary>
     /// Adds an alias for a command.
     /// </summary>
-    public static RecordRegistrationBase AddAlias(string commandName, string alias)
+    public static RecordRegistration<TContext> AddAlias(string commandName, string alias)
     {
         if (!_registrations.TryGetValue(commandName, out var registration))
             throw new ArgumentException($"Command '{commandName}' is not registered", nameof(commandName));
@@ -72,10 +112,9 @@ public static class RecordCommandRegistry
     /// <summary>
     /// Parses and runs a command string (e.g. "add language nl Dutch").
     /// </summary>
-    /// <typeparam name="TContext">The type of the context (e.g. MyData).</typeparam>
     /// <param name="context">The context instance.</param>
     /// <param name="command">The command string.</param>
-    public static void Run<TContext>(TContext context, string command)
+    public static void Run(TContext context, string command)
     {
         ArgumentNullException.ThrowIfNull(context);
 
@@ -149,10 +188,9 @@ public static class RecordCommandRegistry
     /// <summary>
     /// Parses and runs multiple commands from a string.
     /// </summary>
-    /// <typeparam name="TContext">The type of the context (e.g. MyData).</typeparam>
     /// <param name="context">The context instance.</param>
     /// <param name="commands">The commands string (separated by newlines).</param>
-    public static void RunMany<TContext>(TContext context, string commands)
+    public static void RunMany(TContext context, string commands)
     {
         ArgumentNullException.ThrowIfNull(context);
 
