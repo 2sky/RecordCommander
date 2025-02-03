@@ -11,7 +11,12 @@ public static partial class RecordCommandRegistry<TContext>
     /// </summary>
     public static string GenerateCommand(object record, CommandGenerationOptions? options = null)
     {
+#if NET8_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(record);
+#else
+        if (record is null)
+            throw new ArgumentNullException(nameof(record));
+#endif
 
         options ??= CommandGenerationOptions.Default;
 
@@ -130,7 +135,11 @@ file static class Helpers
             foreach (var item in array)
                 items.Add(item is null ? string.Empty : ConvertValueToString(item, item.GetType()));
 
+#if NET8_0_OR_GREATER
             return $"[{string.Join(',', items)}]";
+#else
+            return $"[{string.Join(",", items)}]";
+#endif
         }
 
         // TODO: Handle other collection types (e.g. IList, IEnumerable)

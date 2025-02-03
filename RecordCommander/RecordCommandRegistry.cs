@@ -109,7 +109,12 @@ public static partial class RecordCommandRegistry<TContext>
     /// <param name="command">The command string.</param>
     public static void Run(TContext context, string command)
     {
+#if NET8_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(context);
+#else
+        if (context is null)
+            throw new ArgumentNullException(nameof(context));
+#endif
 
         var tokens = Helpers.Tokenize(command);
         if (tokens.Count == 0)
@@ -144,7 +149,11 @@ public static partial class RecordCommandRegistry<TContext>
                     throw new ArgumentException($"Named argument '{token}' must be in the format --Property=value");
                 }
                 var propName = token.Substring(2, eqIndex - 2);
+#if NET8_0_OR_GREATER
                 var propValue = token[(eqIndex + 1)..];
+#else
+                var propValue = token.Substring(eqIndex + 1);
+#endif
                 namedArgs[propName] = propValue;
             }
             else
@@ -182,13 +191,22 @@ public static partial class RecordCommandRegistry<TContext>
     /// <param name="commands">The commands string (separated by newlines).</param>
     public static void RunMany(TContext context, string commands)
     {
+#if NET8_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(context);
+#else
+        if (context is null)
+            throw new ArgumentNullException(nameof(context));
+#endif
 
         var lines = commands.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries);
         foreach (var line in lines)
         {
             var sanitized = line.Trim();
+#if NET8_0_OR_GREATER
             if (string.IsNullOrEmpty(sanitized) || sanitized.StartsWith('#'))
+#else
+            if (string.IsNullOrEmpty(sanitized) || sanitized.StartsWith("#", StringComparison.Ordinal))
+#endif
                 continue;
 
             Run(context, sanitized);
@@ -199,7 +217,7 @@ public static partial class RecordCommandRegistry<TContext>
     /// Converts a string value into a value of the specified type.
     /// Special handling is included for array types (expecting a JSON–like format).
     /// </summary>
-    private static object ConvertToType(string value, Type targetType)
+    private static object? ConvertToType(string value, Type targetType)
     {
         // TODO: Handle custom conversions (e.g. enums, DateTime, etc.)
         // TODO: Handle nullable types
@@ -211,7 +229,11 @@ public static partial class RecordCommandRegistry<TContext>
         {
             // Expect a JSON array syntax.
             var json = value;
+#if NET8_0_OR_GREATER
             if (json.StartsWith('[') && json.EndsWith(']'))
+#else
+            if (json.StartsWith("[", StringComparison.Ordinal) && json.EndsWith("]", StringComparison.Ordinal))
+#endif
             {
                 // If the array does not contain any quotes, assume it's a comma-separated list without quotes.
                 if (!json.Contains('"') && !json.Contains('\''))

@@ -22,7 +22,12 @@ public class RecordRegistration<TContext, TRecord> : RecordRegistration<TContext
     /// <inheritdoc />
     public override object FindOrCreateRecord(TContext context, string uniqueKey)
     {
+#if NET8_0_OR_GREATER
         ArgumentNullException.ThrowIfNull(context);
+#else
+        if (context is null)
+            throw new ArgumentNullException(nameof(context));
+#endif
 
         // Retrieve the collection from the context.
         var collection = _collectionAccessor(context);
