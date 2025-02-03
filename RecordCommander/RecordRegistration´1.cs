@@ -22,7 +22,6 @@ public abstract class RecordRegistration<TContext>
     /// </summary>
     public PropertyInfo UniqueKeyProperty { get; }
 
-    // TODO: Handle aliases for properties.
     /// <summary>
     /// All public, settable properties (used to resolve named arguments).
     /// </summary>
@@ -39,9 +38,16 @@ public abstract class RecordRegistration<TContext>
         RecordType = recordType;
         UniqueKeyProperty = uniqueKeyProperty;
         PositionalProperties = positionalProperties;
-        AllProperties = recordType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Where(p => p.CanWrite)
-            .ToDictionary(p => p.Name, StringComparer.OrdinalIgnoreCase);
+        AllProperties = new(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var property in recordType.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(p => p.CanWrite))
+        {
+            AllProperties[property.Name] = property;
+
+            var aliasAttributes = property.GetCustomAttributes<AliasAttribute>();
+            foreach (var alias in aliasAttributes)
+                AllProperties[alias.Name] = property;
+        }
     }
 
     /// <summary>

@@ -14,7 +14,7 @@ public static class RecordCommandRegistry
     /// </summary>
     /// <typeparam name="TContext">Type of the context (for example, your data container).</typeparam>
     /// <typeparam name="TRecord">Record type (for example, Language or Country).</typeparam>
-    /// <param name="commandName">The command token to use (e.g. "language").</param>
+    /// <param name="commandName">The command token to use (e.g. "language"), this is case-insensitive.</param>
     /// <param name="collectionAccessor">A lambda to extract the collection (e.g. ctx => ctx.Languages).</param>
     /// <param name="uniqueKeySelector">An expression to select the unique key property (e.g. x => x.Key).</param>
     /// <param name="positionalPropertySelectors">Expressions for additional (positional) properties.</param>
@@ -62,7 +62,7 @@ public static class RecordCommandRegistry<TContext>
     /// Registers a record type with its configuration.
     /// </summary>
     /// <typeparam name="TRecord">Record type (for example, Language or Country).</typeparam>
-    /// <param name="commandName">The command token to use (e.g. "language").</param>
+    /// <param name="commandName">The command token to use (e.g. "language"), this is case-insensitive.</param>
     /// <param name="collectionAccessor">A lambda to extract the collection (e.g. ctx => ctx.Languages).</param>
     /// <param name="uniqueKeySelector">An expression to select the unique key property (e.g. x => x.Key).</param>
     /// <param name="positionalPropertySelectors">Expressions for additional (positional) properties.</param>
@@ -80,7 +80,9 @@ public static class RecordCommandRegistry<TContext>
         var registration = new RecordRegistration<TContext, TRecord>(commandName, collectionAccessor, uniqueKeyProp, positionalProps);
         _registrations[commandName] = registration;
 
-        // TODO: Could we determine aliases via attributes on the class or properties?
+        var aliasAttributes = typeof(TRecord).GetCustomAttributes<AliasAttribute>();
+        foreach (var alias in aliasAttributes)
+            _registrations[alias.Name] = registration;
 
         return registration;
     }

@@ -7,6 +7,7 @@ public class TestContext
     public List<Country> Countries { get; set; } = [];
 }
 
+[Alias("lang")]
 public class Language
 {
     public string Key { get; set; } = null!;
@@ -17,6 +18,8 @@ public class Country
 {
     public string Code { get; set; } = null!;
     public string Name { get; set; } = null!;
+
+    [Alias("langs")]
     public string[] SpokenLanguages { get; set; } = [];
 }
 
@@ -39,7 +42,7 @@ public class RecordCommanderTests
             );
 
             // Add an alias for the "language" command.
-            RecordCommandRegistry<TestContext>.AddAlias("language", "lang");
+            RecordCommandRegistry<TestContext>.AddAlias("language", "lang2");
         }
         catch { /* Ignore if already registered */ }
 
@@ -71,10 +74,34 @@ public class RecordCommanderTests
     }
 
     [Fact]
+    public void AddLanguage_ValidInput_ShouldCreateLanguageRecord_IgnoreCase()
+    {
+        var context = new TestContext();
+        RecordCommandRegistry.Run(context, "add Language en English");
+
+        Assert.Single(context.Languages);
+        var lang = context.Languages.First();
+        Assert.Equal("en", lang.Key, ignoreCase: true);
+        Assert.Equal("English", lang.Name);
+    }
+
+    [Fact]
     public void AddLanguage_ValidInput_ShouldCreateLanguageRecord_ViaAlias()
     {
         var context = new TestContext();
         RecordCommandRegistry.Run(context, "add lang en English");
+
+        Assert.Single(context.Languages);
+        var lang = context.Languages.First();
+        Assert.Equal("en", lang.Key, ignoreCase: true);
+        Assert.Equal("English", lang.Name);
+    }
+
+    [Fact]
+    public void AddLanguage_ValidInput_ShouldCreateLanguageRecord_ViaAlias2()
+    {
+        var context = new TestContext();
+        RecordCommandRegistry.Run(context, "add lang2 en English");
 
         Assert.Single(context.Languages);
         var lang = context.Languages.First();
@@ -93,6 +120,18 @@ public class RecordCommanderTests
         Assert.Equal("us", country.Code, ignoreCase: true);
         Assert.Equal("USA", country.Name);
         Assert.Empty(country.SpokenLanguages);
+    }
+
+    [Fact]
+    public void AddCountry_SpokenLanguages_ViaAlias()
+    {
+        var context = new TestContext();
+        RecordCommandRegistry.Run(context, "add ctr us USA --langs=[en,es]");
+
+        Assert.Single(context.Countries);
+        var country = context.Countries.First();
+        Assert.Equal("us", country.Code, ignoreCase: true);
+        Assert.Equal("USA", country.Name);
     }
 
     [Fact]
