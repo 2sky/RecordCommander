@@ -45,7 +45,7 @@ public static partial class RecordCommandRegistry<TContext>
 
         // Prepare additional properties (all properties except the unique key)
         // that have non-default values.
-        var additionalProps = new List<(PropertyInfo Prop, string Name, object? Value)>();
+        var additionalProps = new HashSet<(PropertyInfo Prop, string Name, object? Value)>();
         foreach (var kvp in registration.AllProperties)
         {
             var prop = kvp.Value;

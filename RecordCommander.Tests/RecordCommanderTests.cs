@@ -3,8 +3,21 @@
 // Sample domain classes for testing
 public class TestContext
 {
+    private readonly List<Book> books = [];
+
     public List<Language> Languages { get; set; } = [];
     public List<Country> Countries { get; set; } = [];
+
+    public ICollection<Book> Books => books;
+
+    public Book? FindBook(string isbn) => books.FirstOrDefault(b => b.ISBN == isbn);
+
+    public Book CreateBook(string isbn)
+    {
+        var book = new Book { ISBN = isbn };
+        books.Add(book);
+        return book;
+    }
 }
 
 [Alias("lang")]
@@ -21,6 +34,23 @@ public class Country
 
     [Alias("langs")]
     public string[] SpokenLanguages { get; set; } = [];
+}
+
+[Alias("bk")]
+public class Book
+{
+    // Unique key for the book.
+    public string ISBN { get; set; } = null!;
+
+    // Title of the book.
+    public string Title { get; set; } = null!;
+
+    // Author of the book.
+    public string Author { get; set; } = null!;
+
+    // Publication year.
+    [Alias("year")]
+    public int PublicationYear { get; set; }
 }
 
 public class RecordCommanderTests
@@ -57,6 +87,18 @@ public class RecordCommanderTests
 
             // Add an alias for the "country" command.
             RecordCommandRegistry<TestContext>.AddAlias("country", "ctr");
+        }
+        catch { /* Ignore if already registered */ }
+
+        try
+        {
+            RecordCommandRegistry.Register<TestContext, Book>(
+                commandName: "book",
+                findRecord: (ctx, isbn) => ctx.FindBook(isbn),
+                createRecord: (ctx, isbn) => ctx.CreateBook(isbn),
+                uniqueKeySelector: x => x.ISBN,
+                positionalPropertySelectors: [x => x.Title, x => x.Author, x => x.PublicationYear]
+            );
         }
         catch { /* Ignore if already registered */ }
     }
@@ -132,6 +174,20 @@ public class RecordCommanderTests
         var country = context.Countries.First();
         Assert.Equal("us", country.Code, ignoreCase: true);
         Assert.Equal("USA", country.Name);
+    }
+
+    [Fact]
+    public void AddBook_ValidInput()
+    {
+        var context = new TestContext();
+        RecordCommandRegistry.Run(context, "add book 978-3-16-148410-0 \"The Book Title\" \"John Doe\" --year=2021");
+
+        Assert.Single(context.Books);
+        var book = context.Books.First();
+        Assert.Equal("978-3-16-148410-0", book.ISBN);
+        Assert.Equal("The Book Title", book.Title);
+        Assert.Equal("John Doe", book.Author);
+        Assert.Equal(2021, book.PublicationYear);
     }
 
     [Fact]
@@ -332,5 +388,19 @@ public class RecordCommanderTests
         var lang = new Language { Key = "en", Name = "English Language" };
         var cmd = RecordCommandRegistry<TestContext>.GenerateCommand(lang);
         Assert.Equal("add language en \"English Language\"", cmd);
+    }
+
+    [Fact]
+    public void Generation_Books_Roundtrip()
+    {
+        var context = new TestContext();
+
+        // Add books via commands (keep as regular string for newlines)
+        const string dummyBooks = "add book 978-3-16-148410-0 \"The Book Title\" \"John Doe\" 2021\nadd book 978-3-16-148410-1 \"Another Book\" \"Jane Doe\" 2022\nadd book 978-3-16-148410-2 \"Third Book\" \"John Doe\" 2023";
+        RecordCommandRegistry.RunMany(context, dummyBooks);
+
+        // Generate commands for each book
+        var commands = string.Join('\n', context.Books.Select(b => RecordCommandRegistry<TestContext>.GenerateCommand(b)));
+        Assert.Equal(dummyBooks, commands);
     }
 }
