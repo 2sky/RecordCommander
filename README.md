@@ -105,12 +105,78 @@ Code: be, Name: Belgium, SpokenLanguages: nl, fr
 
 2. **Command Parsing:**  
    The `Run` method tokenizes the input command. It supports quoted strings, simple escape sequences, and recognizes tokens prefixed with `--` as named property assignments.
+   Likewise the `RunMany` method supports multiple commands in a single string, separated by newlines, ignoring empty lines and lines starting with `#`.
 
 3. **Record Updating/Creation:**  
    The library searches for an existing record using the unique key. If found, it updates the record’s properties; otherwise, it creates a new record and adds it to the collection.
 
 4. **Type Conversion:**  
    Values are converted to the target property types using built-in conversion mechanisms. Array values can be provided in a JSON–like syntax for easy parsing.
+
+## Use Cases
+
+### AI
+
+Once you have a simple set of commands, you can use AI models to let you generate the data for you, for example giving the following propmt to GPT-4o:
+```
+add country BE "Belgium" --SpokenLanguages=['nl','fr']
+add country DE "Germany" --SpokenLanguages=["de"]
+add country FR "France" --SpokenLanguages=["fr"]
+
+can you extend the list with all the EU countries in the same format as above
+```
+
+It will then generate the following output:
+```
+add country AT "Austria" --SpokenLanguages=["de"]
+add country BE "Belgium" --SpokenLanguages=['nl','fr']
+add country BG "Bulgaria" --SpokenLanguages=["bg"]
+add country HR "Croatia" --SpokenLanguages=["hr"]
+add country CY "Cyprus" --SpokenLanguages=["el"]
+add country CZ "Czech Republic" --SpokenLanguages=["cs"]
+add country DK "Denmark" --SpokenLanguages=["da"]
+add country EE "Estonia" --SpokenLanguages=["et"]
+add country FI "Finland" --SpokenLanguages=["fi", "sv"]
+add country FR "France" --SpokenLanguages=["fr"]
+add country DE "Germany" --SpokenLanguages=["de"]
+add country EL "Greece" --SpokenLanguages=["el"]
+add country HU "Hungary" --SpokenLanguages=["hu"]
+add country IE "Ireland" --SpokenLanguages=["en", "ga"]
+add country IT "Italy" --SpokenLanguages=["it"]
+add country LV "Latvia" --SpokenLanguages=["lv"]
+add country LT "Lithuania" --SpokenLanguages=["lt"]
+add country LU "Luxembourg" --SpokenLanguages=["lb", "fr", "de"]
+add country MT "Malta" --SpokenLanguages=["mt", "en"]
+add country NL "Netherlands" --SpokenLanguages=["nl"]
+add country PL "Poland" --SpokenLanguages=["pl"]
+add country PT "Portugal" --SpokenLanguages=["pt"]
+add country RO "Romania" --SpokenLanguages=["ro"]
+add country SK "Slovakia" --SpokenLanguages=["sk"]
+add country SI "Slovenia" --SpokenLanguages=["sl"]
+add country ES "Spain" --SpokenLanguages=["es"]
+add country SE "Sweden" --SpokenLanguages=["sv"]
+```
+
+### Dev Data
+
+You can use this library to seed data for your development environment.
+
+### Bug Reproduction
+
+You can use this library to reproduce bugs in your application by creating the same data that caused the bug.
+
+### Documentation
+
+You can use this library to generate sample data for your documentation. So that the user reading your documentation can copy and paste the commands to seed the data.
+
+## Limitations (at the moment))
+
+- **No Validation:**  
+  The library does not perform any validation on the input data. You should validate the data before using it in your application.
+- **No Error Handling:**  
+  The library does not provide detailed error messages. If a command fails, it will throw an exception with a generic message.
+- **No Customization:**  
+  The library does not provide customization options for the command parsing or record creation process.
 
 ## Contributing
 
