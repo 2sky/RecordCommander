@@ -207,6 +207,26 @@ public class RecordCommanderTests
     }
 
     [Fact]
+    public void UpdateLanguage_ShouldUpdateExistingRecord_ViaRunMany_AndIgnoreEmptyOrCommentLines()
+    {
+        var context = new TestContext();
+        // Add a language record with a wrong name.
+        // Include an empty line and a comment line.
+        // Then update it with the correct name.
+        RecordCommandRegistry.RunMany(context, """
+                                               add language en Englsh
+
+                                               # This is a comment
+                                               add language en English
+                                               """);
+
+        Assert.Single(context.Languages);
+        var lang = context.Languages.First();
+        Assert.Equal("en", lang.Key, ignoreCase: true);
+        Assert.Equal("English", lang.Name);
+    }
+
+    [Fact]
     public void UpdateLanguage_ShouldUpdateExistingRecord_ViaRunManyAndAlias()
     {
         var context = new TestContext();

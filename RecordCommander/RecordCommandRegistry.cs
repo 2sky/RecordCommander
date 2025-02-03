@@ -198,7 +198,13 @@ public static class RecordCommandRegistry<TContext>
 
         var lines = commands.Split(["\r\n", "\n"], StringSplitOptions.RemoveEmptyEntries);
         foreach (var line in lines)
-            Run(context, line);
+        {
+            var sanitized = line.Trim();
+            if (string.IsNullOrEmpty(sanitized) || sanitized.StartsWith('#'))
+                continue;
+
+            Run(context, sanitized);
+        }
     }
 
     /// <summary>
