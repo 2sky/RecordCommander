@@ -133,7 +133,7 @@ public static partial class RecordCommandRegistry<TContext>
         RecordRegistration<TContext, TRecord> registration;
         if (collectionAccessor is not null)
             registration = new(commandName, collectionAccessor, uniqueKeyProp, positionalProps);
-        else if (findRecord is not null)
+        else if (findRecord is not null && createRecord is not null)
             registration = new(commandName, uniqueKeyProp, positionalProps, findRecord, createRecord);
         else
             throw new ArgumentException("Either collectionAccessor or findRecord and createRecord must be provided");
@@ -337,6 +337,25 @@ public static partial class RecordCommandRegistry<TContext>
             }
 
             throw new ArgumentException($"Value '{value}' is not a valid array representation, expected JSON array syntax");
+        }
+
+        if (targetType.IsEnum)
+        {
+#if NET8_0_OR_GREATER
+            if (Enum.TryParse(targetType, value, true, out var result))
+                return result;
+#else
+            try
+            {
+                return Enum.Parse(targetType, value, true);
+            }
+            catch
+            {
+                // NOTE: We'll throw an exception below without more information
+            }
+#endif
+
+            throw new ArgumentException($"Failed to parse enum value '{value}' for type {targetType.Name}");
         }
 
         // For primitives (int, bool, etc.) use ChangeType.

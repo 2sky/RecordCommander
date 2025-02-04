@@ -51,6 +51,32 @@ public class Book
     // Publication year.
     [Alias("year")]
     public int PublicationYear { get; set; }
+
+    // Status of the book.
+    public BookStatus Status { get; set; } = BookStatus.Available;
+
+    // Flags for the book.
+    public BookFlags Flags { get; set; } = BookFlags.None;
+}
+
+public enum BookStatus
+{
+    Available,
+    Borrowed,
+    Lost,
+}
+
+[Flags]
+public enum BookFlags
+{
+    None = 0,
+    Fiction = 1,
+    NonFiction = 2,
+    Mystery = 4,
+    Thriller = 8,
+    Romance = 16,
+    Fantasy = 32,
+    ScienceFiction = 64,
 }
 
 public class RecordCommanderTests
@@ -188,6 +214,22 @@ public class RecordCommanderTests
         Assert.Equal("The Book Title", book.Title);
         Assert.Equal("John Doe", book.Author);
         Assert.Equal(2021, book.PublicationYear);
+    }
+
+    [Fact]
+    public void AddBook_ValidInput_Enums()
+    {
+        var context = new TestContext();
+        RecordCommandRegistry.Run(context, "add book 978-3-16-148410-0 \"The Book Title\" \"John Doe\" --year=2021 --status=Borrowed --flags=Fiction,Mystery");
+
+        Assert.Single(context.Books);
+        var book = context.Books.First();
+        Assert.Equal("978-3-16-148410-0", book.ISBN);
+        Assert.Equal("The Book Title", book.Title);
+        Assert.Equal("John Doe", book.Author);
+        Assert.Equal(2021, book.PublicationYear);
+        Assert.Equal(BookStatus.Borrowed, book.Status);
+        Assert.Equal(BookFlags.Fiction | BookFlags.Mystery, book.Flags);
     }
 
     [Fact]
