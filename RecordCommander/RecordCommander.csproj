@@ -10,11 +10,10 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>RecordCommander</PackageId>
     <Version>0.9.0</Version>
-    <Authors>Steve Hansen</Authors>
-    <Company>Hansen Consultancy</Company>
+    <Authors>2sky NV</Authors>
     <Description>A lightweight C# library that enables command-based seeding and updating of records.</Description>
-    <RepositoryUrl>https://github.com/stevehansen/RecordCommander</RepositoryUrl>
-    <PackageProjectUrl>https://github.com/stevehansen/RecordCommander</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/2sky/RecordCommander</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/2sky/RecordCommander</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
     <PackageIcon>logo-128x128.png</PackageIcon>
