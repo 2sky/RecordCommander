@@ -7,10 +7,19 @@
         public List<Country> Countries { get; set; } = [];
     }
 
+    [Alias("lang")]
     public class Language
     {
+        private readonly Dictionary<string, string> labels = [];
+
         public string Key { get; set; } = null!;
         public string Name { get; set; } = null!;
+
+        public void SetLabel(string culture, string label) => labels[culture] = label;
+
+        public string? GetLabel(string culture) => labels.GetValueOrDefault(culture);
+
+        public override string ToString() => RecordCommandRegistry<MyData>.GenerateCommand(this); // TODO: Doesn't handle Labels yet
     }
 
     public class Country
@@ -18,6 +27,8 @@
         public string Code { get; set; } = null!;
         public string Name { get; set; } = null!;
         public string[] SpokenLanguages { get; set; } = [];
+
+        public override string ToString() => RecordCommandRegistry<MyData>.GenerateCommand(this);
     }
 
     internal class Program
@@ -43,7 +54,8 @@
             var context = new MyData();
 
             // Run a few commands.
-            RecordCommandRegistry.Run(context, "add language nl Dutch");
+            RecordCommandRegistry.Run(context, "add lang nl Dutch --Label:nl=Nederlands");
+            RecordCommandRegistry.Run(context, "add lang nl --Label:de=Niederländisch --Label:fr=Néerlandais");
             RecordCommandRegistry.Run(context, "add language fr French");
             RecordCommandRegistry.Run(context, "add country be Belgium");
             // In this command, we update the already–created country "be" by providing the SpokenLanguages via a named argument.

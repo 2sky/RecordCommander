@@ -23,8 +23,14 @@ public class TestContext
 [Alias("lang")]
 public class Language
 {
+    private readonly Dictionary<string, string> labels = [];
+
     public string Key { get; set; } = null!;
     public string Name { get; set; } = null!;
+
+    public void SetLabel(string culture, string label) => labels[culture] = label;
+
+    public string? GetLabel(string culture) => labels.GetValueOrDefault(culture);
 }
 
 public class Country
@@ -344,6 +350,22 @@ public class RecordCommanderTests
     }
 
     [Fact]
+    public void MethodMapping_ShouldCallCorrectMethod()
+    {
+        var context = new TestContext();
+        // Add a language record.
+        RecordCommandRegistry.Run(context, "add language en English");
+        // Add label for the language.
+        RecordCommandRegistry.Run(context, "add language en --Label:de=Englisch");
+
+        Assert.Single(context.Languages);
+        var lang = context.Languages.First();
+        Assert.Equal("en", lang.Key, ignoreCase: true);
+        Assert.Equal("English", lang.Name);
+        Assert.Equal("Englisch", lang.GetLabel("de"));
+    }
+
+    [Fact]
     public void InvalidCommand_MissingTokens_ShouldThrowException()
     {
         var context = new TestContext();
@@ -386,6 +408,47 @@ public class RecordCommanderTests
             RecordCommandRegistry.Run(context, "add country de Germany --SpokenLanguages=nl;fr")
         );
         Assert.Contains("is not a valid array representation", ex.Message);
+    }
+
+    [Fact]
+    public void InvalidMethodCallFormat_ShouldThrowException()
+    {
+        var context = new TestContext();
+        // Providing an invalid method call format (missing ':' separator)
+        // should throw an exception.
+        var ex = Assert.Throws<ArgumentException>(() =>
+            RecordCommandRegistry.Run(context, "add language en --Label=de Englisch")
+        );
+        Assert.Contains("Property 'Label' does not exist on type", ex.Message);
+
+        // Providing an invalid method call format (missing '=' separator)
+        // should throw an exception.
+        ex = Assert.Throws<ArgumentException>(() =>
+            RecordCommandRegistry.Run(context, "add language en --Label:de Englisch")
+        );
+        Assert.Contains("Named argument", ex.Message);
+    }
+
+    [Fact]
+    public void MissingMethod_ShouldThrowException()
+    {
+        var context = new TestContext();
+        // Calling a non-existing method should throw an exception.
+        var ex = Assert.Throws<ArgumentException>(() =>
+            RecordCommandRegistry.Run(context, "add language en --Description:de=Englisch")
+        );
+        Assert.Contains("Method 'Description' does not exist on type", ex.Message);
+    }
+
+    [Fact]
+    public void InvalidMethodArguments_ShouldThrowException()
+    {
+        var context = new TestContext();
+        // Calling a method with invalid arguments should throw an exception.
+        var ex = Assert.Throws<ArgumentException>(() =>
+            RecordCommandRegistry.Run(context, "add language en --GetLabel:de=Englisch")
+        );
+        Assert.Contains("Method 'GetLabel' must have exactly 2 parameters", ex.Message);
     }
 
     [Fact]

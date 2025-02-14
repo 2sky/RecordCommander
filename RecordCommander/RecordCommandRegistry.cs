@@ -230,12 +230,45 @@ public static partial class RecordCommandRegistry<TContext>
         }
 
         // Update with named arguments.
+#if NET8_0_OR_GREATER
+        foreach (var (key, value) in namedArgs)
+        {
+#else
         foreach (var kvp in namedArgs)
         {
-            if (!registration.AllProperties.TryGetValue(kvp.Key, out var prop))
-                throw new ArgumentException($"Property '{kvp.Key}' does not exist on type '{registration.RecordType.Name}'");
+            var key = kvp.Key;
+            var value = kvp.Value;
+#endif
+            if (!registration.AllProperties.TryGetValue(key, out var prop))
+            {
+                // Check if the key contains a colon as this indicates we're dealing with a method call.
+                // --Label:en=English may be a method call as SetLabel("en", "English") or Label("en", "English").
+                var colonIndex = key.IndexOf(':');
+                if (colonIndex > 0)
+                {
+#if NET8_0_OR_GREATER
+                    var methodName = key[..colonIndex];
+                    var args = key[(colonIndex + 1)..];
+#else
+                    var methodName = key.Substring(0, colonIndex);
+                    var args = key.Substring(colonIndex + 1);
+#endif
+                    var method = registration.RecordType.GetMethod(methodName) ?? registration.RecordType.GetMethod("Set" + methodName);
+                    if (method is null)
+                        throw new ArgumentException($"Method '{methodName}' does not exist on type '{registration.RecordType.Name}'");
 
-            var converted = ConvertToType(kvp.Value, prop.PropertyType);
+                    var parameters = method.GetParameters();
+                    if (parameters.Length != 2)
+                        throw new ArgumentException($"Method '{methodName}' must have exactly 2 parameters, got {parameters.Length} instead");
+
+                    method.Invoke(record, [ConvertToType(args, parameters[0].ParameterType), ConvertToType(value, parameters[1].ParameterType)]);
+                    continue;
+                }
+
+                throw new ArgumentException($"Property '{key}' does not exist on type '{registration.RecordType.Name}'");
+            }
+
+            var converted = ConvertToType(value, prop.PropertyType);
             prop.SetValue(record, converted);
         }
     }
