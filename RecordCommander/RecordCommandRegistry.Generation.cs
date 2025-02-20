@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using System.Text;
 
 namespace RecordCommander;
@@ -37,9 +37,7 @@ public static partial class RecordCommandRegistry<TContext>
         builder.Append(' ');
 
         // Unique key: always include it.
-        var uniqueKeyValue = registration.UniqueKeyProperty.GetValue(record);
-        if (uniqueKeyValue is null)
-            throw new InvalidOperationException("Unique key property cannot be null.");
+        var uniqueKeyValue = registration.UniqueKeyProperty.GetValue(record) ?? throw new InvalidOperationException("Unique key property cannot be null.");
 
         builder.Append(Helpers.ConvertValueToString(uniqueKeyValue, uniqueKeyValue.GetType()));
 

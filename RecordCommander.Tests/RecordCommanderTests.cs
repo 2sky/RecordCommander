@@ -1,12 +1,16 @@
-﻿namespace RecordCommander.Tests;
+// ReSharper disable InconsistentNaming
+// ReSharper disable StringLiteralTypo
+// ReSharper disable UnusedMember.Global
+
+namespace RecordCommander.Tests;
 
 // Sample domain classes for testing
 public class TestContext
 {
     private readonly List<Book> books = [];
 
-    public List<Language> Languages { get; set; } = [];
-    public List<Country> Countries { get; set; } = [];
+    public List<Language> Languages { get; } = [];
+    public List<Country> Countries { get; } = [];
 
     public ICollection<Book> Books => books;
 

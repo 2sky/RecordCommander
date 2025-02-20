@@ -47,7 +47,7 @@
                 commandName: "country",
                 collectionAccessor: ctx => ctx.Countries,
                 uniqueKeySelector: x => x.Code,
-                positionalPropertySelectors: [x => x.Name, x => x.SpokenLanguages]
+                positionalPropertySelectors: [x => x.Name]
             );
 
             // Create a context instance.
