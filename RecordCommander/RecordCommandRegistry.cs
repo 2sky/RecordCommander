@@ -1,4 +1,4 @@
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 
@@ -92,6 +92,12 @@ public static partial class RecordCommandRegistry<TContext>
 
     private static readonly Dictionary<string, RecordRegistration<TContext>> _registrations =
         new(StringComparer.OrdinalIgnoreCase);
+
+    // We also want to make extra commands besides "add" to custom methods.
+    // Each method should have a first argument of TContext, following by zero or more arguments.
+    // e.g. "add-to-group <group> <user>" could be a method AddToGroup(TContext ctx, string group, string user).
+    // or "set-label <culture> <label>" could be a method SetLabel(TContext ctx, string culture, string label).
+    private static readonly Dictionary<string, CustomCommand> _extraCommands = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Checks if a command is registered.
@@ -196,6 +202,23 @@ public static partial class RecordCommandRegistry<TContext>
     }
 
     /// <summary>
+    /// Registers a custom command that maps to a method on the context.
+    /// </summary>
+    public static void RegisterCommand(string commandName, Delegate action)
+    {
+        if (commandName is "add")
+            throw new ArgumentException("Command name 'add' is reserved", nameof(commandName));
+
+        // Validate the action signature.
+        var method = action.Method;
+        var parameters = method.GetParameters();
+        if (parameters.Length == 0 || parameters[0].ParameterType != typeof(TContext))
+            throw new ArgumentException("The first parameter of the action must be of type " + typeof(TContext).Name, nameof(action));
+
+        _extraCommands[commandName] = new(action);
+    }
+
+    /// <summary>
     /// Parses and runs a command string (e.g. "add language nl Dutch").
     /// </summary>
     /// <param name="context">The context instance.</param>
@@ -216,7 +239,16 @@ public static partial class RecordCommandRegistry<TContext>
         // For now, we only support the "add" action.
         var action = tokens[0].ToLowerInvariant();
         if (action != "add")
+        {
+            // Check if it's a custom command.
+            if (_extraCommands.TryGetValue(action, out var customAction))
+            {
+                customAction.Invoke(context, tokens);
+                return;
+            }
+
             throw new NotSupportedException($"Action '{action}' not supported");
+        }
 
         if (tokens.Count < 3)
             throw new NotSupportedException("Command must have at least 3 tokens: 'add', type, key");
@@ -434,6 +466,33 @@ public static partial class RecordCommandRegistry<TContext>
         catch (Exception ex)
         {
             throw new ArgumentException($"Failed to convert value '{value}' to type {targetType.Name}", ex);
+        }
+    }
+
+    private sealed class CustomCommand
+    {
+        private readonly Delegate _action;
+        private readonly ParameterInfo[] _parameters;
+
+        public CustomCommand(Delegate action)
+        {
+            _action = action;
+            _parameters = action.Method.GetParameters();
+        }
+
+        public void Invoke(TContext context, List<string> tokens)
+        {
+            // Validate the number of arguments.
+            if (tokens.Count != _parameters.Length)
+                throw new ArgumentException($"Expected {_parameters.Length} arguments, got {tokens.Count}");
+
+            // Convert the tokens to the expected types.
+            var args = new object?[_parameters.Length];
+            args[0] = context;
+            for (var i = 1; i < _parameters.Length; i++)
+                args[i] = ConvertToType(tokens[i], _parameters[i].ParameterType);
+
+            _action.DynamicInvoke(args);
         }
     }
 }

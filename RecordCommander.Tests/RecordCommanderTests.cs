@@ -1,4 +1,4 @@
-// ReSharper disable InconsistentNaming
+﻿// ReSharper disable InconsistentNaming
 // ReSharper disable StringLiteralTypo
 // ReSharper disable UnusedMember.Global
 
@@ -22,6 +22,8 @@ public class TestContext
         books.Add(book);
         return book;
     }
+
+    public List<string> Logs { get; } = [];
 }
 
 [Alias("lang")]
@@ -137,6 +139,21 @@ public class RecordCommanderTests
             );
         }
         catch { /* Ignore if already registered */ }
+
+        RecordCommandRegistry<TestContext>.RegisterCommand("log", (TestContext context, string log) => context.Logs.Add(log));
+        RecordCommandRegistry<TestContext>.RegisterCommand("add-language-to-country", (TestContext context, string countryCode, string langKey) =>
+        {
+            var country = context.Countries.FirstOrDefault(c => c.Code == countryCode);
+            if (country is null)
+                throw new InvalidOperationException($"Country '{countryCode}' not found.");
+
+            var lang = context.Languages.FirstOrDefault(l => l.Key == langKey);
+            if (lang is null)
+                throw new InvalidOperationException($"Language '{langKey}' not found.");
+
+            if (!country.SpokenLanguages.Contains(langKey))
+                country.SpokenLanguages = country.SpokenLanguages.Append(langKey).ToArray();
+        });
     }
 
     [Fact]
@@ -511,5 +528,40 @@ public class RecordCommanderTests
         // Generate commands for each book
         var commands = string.Join('\n', context.Books.Select(b => RecordCommandRegistry<TestContext>.GenerateCommand(b)));
         Assert.Equal(dummyBooks, commands);
+    }
+
+    [Fact]
+    public void CustomCommands_SingleParameter()
+    {
+        var context = new TestContext();
+
+        // Add a log entry via a custom command.
+        RecordCommandRegistry.Run(context, "log \"This is a log entry\"");
+
+        Assert.Single(context.Logs);
+        Assert.Equal("This is a log entry", context.Logs.First());
+    }
+
+    [Fact]
+    public void CustomCommands_AddLanguageToCountry()
+    {
+        var context = new TestContext();
+
+        // Add a language record.
+        RecordCommandRegistry.Run(context, "add language en English");
+
+        // Add a country record.
+        RecordCommandRegistry.Run(context, "add country be Belgium");
+
+        // Add the language to the country.
+        RecordCommandRegistry.Run(context, "add-language-to-country be en");
+
+        Assert.Single(context.Countries);
+        var country = context.Countries.First();
+        Assert.Equal("be", country.Code, ignoreCase: true);
+        Assert.Equal("Belgium", country.Name);
+        Assert.NotNull(country.SpokenLanguages);
+        Assert.Single(country.SpokenLanguages);
+        Assert.Equal("en", country.SpokenLanguages.First());
     }
 }
