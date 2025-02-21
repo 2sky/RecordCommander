@@ -141,6 +141,7 @@ public class RecordCommanderTests
         catch { /* Ignore if already registered */ }
 
         RecordCommandRegistry<TestContext>.RegisterCommand("log", (TestContext context, string log) => context.Logs.Add(log));
+        RecordCommandRegistry<TestContext>.RegisterCommand("log2", (TestContext context, string log, bool b = true, int x = 5) => context.Logs.Add($"{log};b={b};x={x}"));
         RecordCommandRegistry<TestContext>.RegisterCommand("add-language-to-country", (TestContext context, string countryCode, string langKey) =>
         {
             var country = context.Countries.FirstOrDefault(c => c.Code == countryCode);
@@ -153,6 +154,19 @@ public class RecordCommanderTests
 
             if (!country.SpokenLanguages.Contains(langKey))
                 country.SpokenLanguages = country.SpokenLanguages.Append(langKey).ToArray();
+        });
+
+        // With optional parameters
+        RecordCommandRegistry<TestContext>.RegisterCommand("update-language", (TestContext context, string key, string name, string? label = null) =>
+        {
+            var lang = context.Languages.FirstOrDefault(l => l.Key == key);
+            if (lang is null)
+            {
+                lang = new() { Key = key, Name = name };
+                context.Languages.Add(lang);
+            }
+            if (label is not null)
+                lang.SetLabel("en", label);
         });
     }
 
@@ -563,5 +577,79 @@ public class RecordCommanderTests
         Assert.NotNull(country.SpokenLanguages);
         Assert.Single(country.SpokenLanguages);
         Assert.Equal("en", country.SpokenLanguages.First());
+    }
+
+    [Fact]
+    public void CustomCommands_WithOptionalParameters()
+    {
+        var context = new TestContext();
+
+        // Add a language record.
+        RecordCommandRegistry.Run(context, "update-language en English");
+
+        Assert.Single(context.Languages);
+        var lang = context.Languages.First();
+        Assert.Equal("en", lang.Key, ignoreCase: true);
+        Assert.Equal("English", lang.Name);
+        Assert.Null(lang.GetLabel("en"));
+
+        // Add with a label.
+        RecordCommandRegistry.Run(context, "update-language en English Englisch");
+        Assert.Single(context.Languages);
+        lang = context.Languages.First();
+        Assert.Equal("en", lang.Key, ignoreCase: true);
+        Assert.Equal("English", lang.Name);
+        Assert.Equal("Englisch", lang.GetLabel("en"));
+    }
+
+    [Fact]
+    public void CustomCommands_Log2_WithOptionalParameters()
+    {
+        var context = new TestContext();
+
+        // Add a log entry via a custom command with optional parameters.
+        RecordCommandRegistry.Run(context, "log2 \"This is a log entry\"");
+        RecordCommandRegistry.Run(context, "log2 \"This is another log entry\" false");
+        RecordCommandRegistry.Run(context, "log2 \"This is a third log entry\" true 10");
+
+        Assert.Equal(3, context.Logs.Count);
+        Assert.Equal("This is a log entry;b=True;x=5", context.Logs[0]);
+        Assert.Equal("This is another log entry;b=False;x=5", context.Logs[1]);
+        Assert.Equal("This is a third log entry;b=True;x=10", context.Logs[2]);
+    }
+
+    [Fact]
+    public void InvalidMethodArguments_CustomCommands_NotEnoughParameters()
+    {
+        var context = new TestContext();
+
+        // Calling a custom method with not enough parameters should throw an exception.
+        var ex = Assert.Throws<ArgumentException>(() =>
+            RecordCommandRegistry.Run(context, "update-language en")
+        );
+        Assert.Contains("Method 'update-language' must have at least 2 parameter(s)", ex.Message);
+    }
+
+    [Fact]
+    public void InvalidMethodArguments_CustomCommands_Log()
+    {
+        var context = new TestContext();
+
+        // Calling a custom method with not enough parameters should throw an exception.
+        var ex = Assert.Throws<ArgumentException>(() =>
+            RecordCommandRegistry.Run(context, "log")
+        );
+        Assert.Contains("Method 'log' must have exactly 1 parameter", ex.Message);
+    }
+
+    [Fact]
+    public void InvalidMethodArguments_CustomCommands_TooManyParameters()
+    {
+        var context = new TestContext();
+        // Calling a custom method with too many parameters should throw an exception.
+        var ex = Assert.Throws<ArgumentException>(() =>
+            RecordCommandRegistry.Run(context, "update-language en English Englisch Extra")
+        );
+        Assert.Contains("Method 'update-language' must have at most 3 parameter(s)", ex.Message);
     }
 }

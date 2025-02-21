@@ -215,7 +215,7 @@ public static partial class RecordCommandRegistry<TContext>
         if (parameters.Length == 0 || parameters[0].ParameterType != typeof(TContext))
             throw new ArgumentException("The first parameter of the action must be of type " + typeof(TContext).Name, nameof(action));
 
-        _extraCommands[commandName] = new(action);
+        _extraCommands[commandName] = new(commandName, action);
     }
 
     /// <summary>
@@ -471,26 +471,47 @@ public static partial class RecordCommandRegistry<TContext>
 
     private sealed class CustomCommand
     {
+        private readonly string _name;
         private readonly Delegate _action;
         private readonly ParameterInfo[] _parameters;
+        private readonly int _requiredParams;
 
-        public CustomCommand(Delegate action)
+        public CustomCommand(string name, Delegate action)
         {
+            _name = name;
             _action = action;
             _parameters = action.Method.GetParameters();
+
+            // Calculate the number of required parameters, so we can keep some optional at the end
+            // e.g. AddToGroup(TContext ctx, string group, string user, bool isAdmin = false) or SetLabel(TContext ctx, string culture, string? label = null)
+            _requiredParams = _parameters.TakeWhile(p => !p.HasDefaultValue).Count();
         }
 
         public void Invoke(TContext context, List<string> tokens)
         {
             // Validate the number of arguments.
-            if (tokens.Count != _parameters.Length)
-                throw new ArgumentException($"Expected {_parameters.Length} arguments, got {tokens.Count}");
+            if (tokens.Count < _requiredParams)
+            {
+                if (_requiredParams == _parameters.Length)
+                    throw new ArgumentException($"Method '{_name}' must have exactly {_parameters.Length - 1} parameter(s), got {tokens.Count - 1}");
+
+                throw new ArgumentException($"Method '{_name}' must have at least {_requiredParams - 1} parameter(s), got {tokens.Count - 1}");
+            }
+
+            if (tokens.Count > _parameters.Length)
+                throw new ArgumentException($"Method '{_name}' must have at most {_parameters.Length - 1} parameter(s), got {tokens.Count - 1}");
 
             // Convert the tokens to the expected types.
             var args = new object?[_parameters.Length];
             args[0] = context;
-            for (var i = 1; i < _parameters.Length; i++)
+            for (var i = 1; i < tokens.Count; i++)
                 args[i] = ConvertToType(tokens[i], _parameters[i].ParameterType);
+            if (tokens.Count < _parameters.Length)
+            {
+                // Fill in the default values for the optional parameters.
+                for (var i = tokens.Count; i < _parameters.Length; i++)
+                    args[i] = _parameters[i].DefaultValue;
+            }
 
             _action.DynamicInvoke(args);
         }
