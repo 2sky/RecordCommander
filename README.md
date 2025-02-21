@@ -126,6 +126,78 @@ Code: be, Name: Belgium, SpokenLanguages: nl, fr
 4. **Type Conversion:**  
    Values are converted to the target property types using built-in conversion mechanisms. Array values can be provided in a JSON–like syntax for easy parsing.
 
+## Features
+
+### Named Arguments
+
+You can use named arguments to update properties of an existing record. For example:
+```csharp
+RecordCommandRegistry.Run(context, "add country be --SpokenLanguages=['nl','fr']");
+```
+
+### Multiple Commands
+
+You can run multiple commands in a single string, separated by newlines. For example:
+```csharp
+RecordCommandRegistry.RunMany(context, @"
+add language nl Dutch
+add language fr French
+add country be Belgium
+add country be --SpokenLanguages=['nl','fr']
+");
+```
+
+### Comments
+
+You can add comments to your command strings by starting a line with `#`. For example:
+```csharp
+RecordCommandRegistry.RunMany(context, @"
+add language nl Dutch
+add language fr French
+# Add Belgium with Dutch and French as spoken languages
+add country be --SpokenLanguages=['nl','fr']
+");
+```
+
+### Alias Attribute
+
+You can use the `AliasAttribute` to provide alternative names for the command and properties. For example:
+```csharp
+[Alias("lang")]
+public class Language
+{
+    public string Key { get; set; }
+    [Alias("n")]
+    public string Name { get; set; }
+}
+```
+
+### Custom Commands
+
+You can create custom commands by calling the RegisterCommand method. For example:
+```csharp
+RecordCommandRegistry<MyData>.RegisterCommand("clear", (MyData ctx) => ctx.Languages.Clear());
+RecordCommandRegistry.Run(context, "clear");
+```
+
+### Custom Commands with optional arguments
+
+You can create custom commands with optional arguments by calling the RegisterCommand method. For example:
+```csharp
+RecordCommandRegistry<MyData>.RegisterCommand("clear", (MyData ctx, string argument, int optionalArg = 10) => ctx.Languages.Clear());
+RecordCommandRegistry.Run(context, "clear arg1");
+RecordCommandRegistry.Run(context, "clear arg1 20");
+```
+
+### Generating Commands
+
+You can generate commands from existing records. For example:
+```csharp
+var lang = new Language { Key = "en", Name = "English Language" };
+var cmd = RecordCommandRegistry<TestContext>.GenerateCommand(lang);
+Assert.Equal("add language en \"English Language\"", cmd);
+```
+
 ## Use Cases
 
 ### AI
@@ -198,14 +270,12 @@ public void Generation_UsingSpaces()
 
 This could be used for exporting data from your application.
 
-## Limitations (at the moment))
+## Limitations (at the moment)
 
 - **No Validation:**  
   The library does not perform any validation on the input data. You should validate the data before using it in your application.
-- **No Error Handling:**  
-  The library does not provide detailed error messages. If a command fails, it will throw an exception with a generic message.
-- **No Customization:**  
-  The library does not provide customization options for the command parsing or record creation process.
+- **Performance:**  
+  The library is not optimized for performance. It is designed to be simple and easy to use.
 
 ## Contributing
 
