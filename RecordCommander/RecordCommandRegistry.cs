@@ -99,10 +99,22 @@ public static partial class RecordCommandRegistry<TContext>
     // or "set-label <culture> <label>" could be a method SetLabel(TContext ctx, string culture, string label).
     private static readonly Dictionary<string, CustomCommand> _extraCommands = new(StringComparer.OrdinalIgnoreCase);
 
+    private static readonly Dictionary<Type, Func<TContext, string, object?>> _customConverters = [];
+
     /// <summary>
-    /// Checks if a command is registered.
+    /// Checks if an add command is registered.
     /// </summary>
     public static bool IsRegistered(string commandName) => _registrations.ContainsKey(commandName);
+
+    /// <summary>
+    /// Check if we have a custom command registered besides "add".
+    /// </summary>
+    public static bool HasExtraCommand(string commandName) => _extraCommands.ContainsKey(commandName);
+
+    /// <summary>
+    /// Checks if a custom converter is registered for the specified type.
+    /// </summary>
+    public static bool HasCustomConverter(Type type) => _customConverters.ContainsKey(type);
 
     /// <summary>
     /// Registers a record type with its configuration.
@@ -219,6 +231,14 @@ public static partial class RecordCommandRegistry<TContext>
     }
 
     /// <summary>
+    /// Registers a custom converter for a specific type.
+    /// </summary>
+    public static void RegisterCustomConverter<T>(Func<TContext, string, T> converter)
+    {
+        _customConverters[typeof(T)] = (ctx, value) => converter(ctx, value);
+    }
+
+    /// <summary>
     /// Parses and runs a command string (e.g. "add language nl Dutch").
     /// </summary>
     /// <param name="context">The context instance.</param>
@@ -292,7 +312,7 @@ public static partial class RecordCommandRegistry<TContext>
         {
             var prop = registration.PositionalProperties[i];
             var argValue = positionalArgs[i];
-            var converted = ConvertToType(argValue, prop.PropertyType);
+            var converted = ConvertToType(context, argValue, prop.PropertyType);
             prop.SetValue(record, converted);
         }
 
@@ -328,14 +348,14 @@ public static partial class RecordCommandRegistry<TContext>
                     if (parameters.Length != 2)
                         throw new ArgumentException($"Method '{methodName}' must have exactly 2 parameters, got {parameters.Length} instead");
 
-                    method.Invoke(record, [ConvertToType(args, parameters[0].ParameterType), ConvertToType(value, parameters[1].ParameterType)]);
+                    method.Invoke(record, [ConvertToType(context, args, parameters[0].ParameterType), ConvertToType(context, value, parameters[1].ParameterType)]);
                     continue;
                 }
 
                 throw new ArgumentException($"Property '{key}' does not exist on type '{registration.RecordType.Name}'");
             }
 
-            var converted = ConvertToType(value, prop.PropertyType);
+            var converted = ConvertToType(context, value, prop.PropertyType);
             prop.SetValue(record, converted);
         }
     }
@@ -373,7 +393,7 @@ public static partial class RecordCommandRegistry<TContext>
     /// Converts a string value into a value of the specified type.
     /// Special handling is included for array types (expecting a JSON–like format).
     /// </summary>
-    private static object? ConvertToType(string value, Type targetType)
+    private static object? ConvertToType(TContext context, string value, Type targetType)
     {
         // TODO: Handle custom conversions (e.g. enums, DateTime, etc.)
         // TODO: Handle nullable types
@@ -458,6 +478,9 @@ public static partial class RecordCommandRegistry<TContext>
             throw new ArgumentException($"Failed to parse enum value '{value}' for type {targetType.Name}");
         }
 
+        if (_customConverters.TryGetValue(targetType, out var converter))
+            return converter(context, value);
+
         // For primitives (int, bool, etc.) use ChangeType.
         try
         {
@@ -505,7 +528,7 @@ public static partial class RecordCommandRegistry<TContext>
             var args = new object?[_parameters.Length];
             args[0] = context;
             for (var i = 1; i < tokens.Count; i++)
-                args[i] = ConvertToType(tokens[i], _parameters[i].ParameterType);
+                args[i] = ConvertToType(context, tokens[i], _parameters[i].ParameterType);
             if (tokens.Count < _parameters.Length)
             {
                 // Fill in the default values for the optional parameters.

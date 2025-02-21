@@ -26,6 +26,17 @@ public class TestContext
     public List<string> Logs { get; } = [];
 }
 
+public record Unit(decimal value, string symbol)
+{
+    public static Unit Parse(string s)
+    {
+        var parts = s.Split(' ');
+        return new Unit(decimal.Parse(parts[0]), parts[1]);
+    }
+
+    public override string ToString() => $"{value} {symbol}";
+}
+
 [Alias("lang")]
 public class Language
 {
@@ -69,6 +80,11 @@ public class Book
 
     // Flags for the book.
     public BookFlags Flags { get; set; } = BookFlags.None;
+
+    public Unit? Dimensions { get; set; }
+
+    [Alias("origin-country")]
+    public Country? OriginCountry { get; set; }
 }
 
 public enum BookStatus
@@ -168,6 +184,10 @@ public class RecordCommanderTests
             if (label is not null)
                 lang.SetLabel("en", label);
         });
+
+        // Custom conversion
+        RecordCommandRegistry<TestContext>.RegisterCustomConverter((_, s) => Unit.Parse(s));
+        RecordCommandRegistry<TestContext>.RegisterCustomConverter((ctx, code) => ctx.Countries.Find(c => c.Code == code));
     }
 
     [Fact]
@@ -646,10 +666,38 @@ public class RecordCommanderTests
     public void InvalidMethodArguments_CustomCommands_TooManyParameters()
     {
         var context = new TestContext();
+
         // Calling a custom method with too many parameters should throw an exception.
         var ex = Assert.Throws<ArgumentException>(() =>
             RecordCommandRegistry.Run(context, "update-language en English Englisch Extra")
         );
         Assert.Contains("Method 'update-language' must have at most 3 parameter(s)", ex.Message);
+    }
+
+    [Fact]
+    public void CustomConversion_Unit()
+    {
+        var context = new TestContext();
+
+        // Add a book with dimensions.
+        RecordCommandRegistry.Run(context, "add book 978-3-16-148410-0 \"The Book Title\" \"John Doe\" --year=2021 --dimensions=\"2 m\"");
+
+        var book = context.Books.First();
+        Assert.NotNull(book.Dimensions);
+        Assert.Equal(2, book.Dimensions.value);
+        Assert.Equal("m", book.Dimensions.symbol);
+    }
+
+    [Fact]
+    public void CustomConversion_Country()
+    {
+        var context = new TestContext();
+        // Add a country record.
+        RecordCommandRegistry.Run(context, "add country be Belgium");
+        // Find the country by code.
+        RecordCommandRegistry.Run(context, "add book 978-3-16-148410-0 \"The Book Title\" \"John Doe\" --year=2021 --origin-country=be");
+        var book = context.Books.First();
+        Assert.Equal("be", book.OriginCountry?.Code);
+        Assert.Equal("Belgium", book.OriginCountry?.Name);
     }
 }

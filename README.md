@@ -189,6 +189,13 @@ RecordCommandRegistry.Run(context, "clear arg1");
 RecordCommandRegistry.Run(context, "clear arg1 20");
 ```
 
+### Custom Conversions
+
+You can register custom converters for the types. For example:
+```csharp
+RecordCommandRegistry<TestContext>.RegisterCustomConverter((ctx, code) => ctx.Countries.Find(c => c.Code == code));
+```
+
 ### Generating Commands
 
 You can generate commands from existing records. For example:
