@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using System.Globalization;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 
@@ -395,12 +396,21 @@ public static partial class RecordCommandRegistry<TContext>
     /// </summary>
     private static object? ConvertToType(TContext context, string value, Type targetType)
     {
-        // TODO: Handle custom conversions (e.g. enums, DateTime, etc.)
-        // TODO: Handle nullable types
+        // Handle nullable types
+        var underlyingType = Nullable.GetUnderlyingType(targetType);
+        if (underlyingType != null)
+        {
+            if (string.IsNullOrEmpty(value))
+                return null;
 
+            targetType = underlyingType;
+        }
+
+        // Handle string type
         if (targetType == typeof(string))
             return value;
 
+        // Handle array types
         if (targetType.IsArray)
         {
             // Expect a JSON array syntax.
@@ -459,6 +469,7 @@ public static partial class RecordCommandRegistry<TContext>
             throw new ArgumentException($"Value '{value}' is not a valid array representation, expected JSON array syntax");
         }
 
+        // Handle enum types
         if (targetType.IsEnum)
         {
 #if NET8_0_OR_GREATER
@@ -478,13 +489,14 @@ public static partial class RecordCommandRegistry<TContext>
             throw new ArgumentException($"Failed to parse enum value '{value}' for type {targetType.Name}");
         }
 
+        // Handle custom converters
         if (_customConverters.TryGetValue(targetType, out var converter))
             return converter(context, value);
 
-        // For primitives (int, bool, etc.) use ChangeType.
+        // Handle primitives (int, bool, etc.) using ChangeType
         try
         {
-            return Convert.ChangeType(value, targetType);
+            return Convert.ChangeType(value, targetType, CultureInfo.InvariantCulture);
         }
         catch (Exception ex)
         {
@@ -578,6 +590,8 @@ file static class Helpers
                 if (c == quoteChar)
                 {
                     inQuotes = false;
+                    tokens.Add(current.ToString());
+                    current.Clear();
                 }
                 else if (c == '\\' && i + 1 < input.Length)
                 {

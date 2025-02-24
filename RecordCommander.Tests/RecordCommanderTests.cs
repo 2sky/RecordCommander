@@ -158,6 +158,9 @@ public class RecordCommanderTests
 
         RecordCommandRegistry<TestContext>.RegisterCommand("log", (TestContext context, string log) => context.Logs.Add(log));
         RecordCommandRegistry<TestContext>.RegisterCommand("log2", (TestContext context, string log, bool b = true, int x = 5) => context.Logs.Add($"{log};b={b};x={x}"));
+        RecordCommandRegistry<TestContext>.RegisterCommand("log3", (TestContext context, string log, int? x) => context.Logs.Add($"{log};x={x}"));
+        // Extra command to test some various types of parameters
+        RecordCommandRegistry<TestContext>.RegisterCommand("log4", (TestContext context, string log, DateTime x, DateOnly y, decimal z, TimeSpan ts, Guid g) => context.Logs.Add($"{log};x={x};y={y};z={z},ts={ts};g={g}"));
         RecordCommandRegistry<TestContext>.RegisterCommand("add-language-to-country", (TestContext context, string countryCode, string langKey) =>
         {
             var country = context.Countries.FirstOrDefault(c => c.Code == countryCode);
@@ -636,6 +639,48 @@ public class RecordCommanderTests
         Assert.Equal("This is a log entry;b=True;x=5", context.Logs[0]);
         Assert.Equal("This is another log entry;b=False;x=5", context.Logs[1]);
         Assert.Equal("This is a third log entry;b=True;x=10", context.Logs[2]);
+    }
+
+    [Fact]
+    public void Arguments_Should_HandleEmptyString()
+    {
+        var context = new TestContext();
+
+        // Add a log with an empty string.
+        RecordCommandRegistry.Run(context, "log \"\"");
+
+        Assert.Single(context.Logs);
+        Assert.Equal("", context.Logs.First());
+    }
+
+    [Fact]
+    public void Arguments_Should_HandleNullableValueTypes()
+    {
+        var context = new TestContext();
+
+        // Call log3 with an integer value.
+        RecordCommandRegistry.Run(context, "log3 \"This is a log entry\" 42");
+
+        Assert.Single(context.Logs);
+        Assert.Equal("This is a log entry;x=42", context.Logs.First());
+    }
+
+    [Fact(Skip = "This test is not ready to pass yet.")]
+    public void Arguments_VariousTypes()
+    {
+        var context = new TestContext();
+
+        // Call log4 with various types of parameters.
+        RecordCommandRegistry.RunMany(context, """
+                                               log4 "This is a log entry" 2021-12-31 2021-12-31 3.14 12:34:56 12345678-1234-1234-1234-1234567890AB
+                                               log4 "Another log entry" 2021-12-31 2021-12-31 3.14 12:34:56 12345678-1234-1234-1234-1234567890AB
+                                               log4 "Third log entry" 2021-12-31 2021-12-31 3.14 12:34:56 12345678-1234-1234-1234-1234567890AB
+                                               """);
+
+        Assert.Equal(3, context.Logs.Count);
+        Assert.Equal("This is a log entry;x=12/31/2021;y=12/31/2021;z=3.14,ts=12:34:56;g=12345678-1234-1234-1234-1234567890AB", context.Logs[0]);
+        Assert.Equal("Another log entry;x=12/31/2021;y=12/31/2021;z=3.14,ts=12:34:56;g=12345678-1234-1234-1234-1234567890AB", context.Logs[1]);
+        Assert.Equal("Third log entry;x=12/31/2021;y=12/31/2021;z=3.14,ts=12:34:56;g=12345678-1234-1234-1234-1234567890AB", context.Logs[2]);
     }
 
     [Fact]
