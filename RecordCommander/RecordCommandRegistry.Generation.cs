@@ -143,10 +143,48 @@ public static partial class RecordCommandRegistry<TContext>
         return sb.ToString().Trim();
     }
 
-    // TODO: Add option to generate a sample prompt for a specific custom command.
-    //public static string GetCustomCommandPrompt(string commandName)
-    //{
-    //}
+    public static string GetCustomCommandPrompt(string commandName, bool describeParameters = false)
+    {
+        if (!_extraCommands.TryGetValue(commandName, out var command))
+            throw new ArgumentException($"Custom command '{commandName}' not found.", nameof(commandName));
+
+        var builder = new StringBuilder();
+        builder.Append(commandName);
+        builder.Append(' ');
+
+#if NET8_0_OR_GREATER
+        var parameters = command.Parameters[1..];
+#else
+        var parameters = command.Parameters.Skip(1).ToArray();
+#endif
+        var requiredParams = command.RequiredParams - 1;
+
+        for (var index = 0; index < parameters.Length; index++)
+        {
+            var param = parameters[index];
+
+            if (index == requiredParams)
+                builder.Append('[');
+
+            builder.Append($"<{param.Name}>");
+
+            if (index < parameters.Length - 1)
+                builder.Append(' ');
+            else if (requiredParams < parameters.Length)
+                builder.Append(']');
+        }
+
+        if (describeParameters)
+        {
+            builder.AppendLine();
+
+            // Describe the parameters by type
+            foreach (var param in parameters)
+                builder.AppendLine($"#   {param.Name} : {Helpers.GetTypeDescription(param.ParameterType)}");
+        }
+
+        return builder.ToString();
+    }
 }
 
 file static class Helpers

@@ -781,4 +781,27 @@ public class RecordCommanderTests
                      #   SpokenLanguages : array of string (quoted if contains spaces)
                      """, country);
     }
+
+    [Fact]
+    public void Generation_GetCustomCommandPrompt()
+    {
+        var log4 = RecordCommandRegistry<TestContext>.GetCustomCommandPrompt("log4");
+        Assert.Equal("log4 <log> <x> <y> <z> <ts> <g>", log4);
+    }
+
+    [Fact]
+    public void Generation_GetCustomCommandPrompt_DescribeParameters()
+    {
+        var log4 = RecordCommandRegistry<TestContext>.GetCustomCommandPrompt("log4", true);
+        Assert.Equal("""
+                     log4 <log> <x> <y> <z> <ts> <g>
+                     #   log : string (quoted if contains spaces)
+                     #   x : date (format yyyy-MM-dd)
+                     #   y : date (format yyyy-MM-dd)
+                     #   z : number
+                     #   ts : timespan
+                     #   g : guid
+
+                     """, log4);
+    }
 }

@@ -556,6 +556,10 @@ public static partial class RecordCommandRegistry<TContext>
             _requiredParams = _parameters.TakeWhile(p => !p.HasDefaultValue).Count();
         }
 
+        public ParameterInfo[] Parameters => _parameters;
+
+        public int RequiredParams => _requiredParams;
+
         public void Invoke(TContext context, List<string> tokens)
         {
             // Validate the number of arguments.
