@@ -160,7 +160,7 @@ public class RecordCommanderTests
         RecordCommandRegistry<TestContext>.RegisterCommand("log2", (TestContext context, string log, bool b = true, int x = 5) => context.Logs.Add($"{log};b={b};x={x}"));
         RecordCommandRegistry<TestContext>.RegisterCommand("log3", (TestContext context, string log, int? x) => context.Logs.Add($"{log};x={x}"));
         // Extra command to test some various types of parameters
-        RecordCommandRegistry<TestContext>.RegisterCommand("log4", (TestContext context, string log, DateTime x, DateOnly y, decimal z, TimeSpan ts, Guid g) => context.Logs.Add($"{log};x={x};y={y};z={z},ts={ts};g={g}"));
+        RecordCommandRegistry<TestContext>.RegisterCommand("log4", (TestContext context, string log, DateTime x, DateOnly y, decimal z, TimeSpan ts, Guid g) => context.Logs.Add(FormattableString.Invariant($"{log};x={x};y={y};z={z},ts={ts};g={g}")));
         RecordCommandRegistry<TestContext>.RegisterCommand("add-language-to-country", (TestContext context, string countryCode, string langKey) =>
         {
             var country = context.Countries.FirstOrDefault(c => c.Code == countryCode);
@@ -665,7 +665,7 @@ public class RecordCommanderTests
         Assert.Equal("This is a log entry;x=42", context.Logs.First());
     }
 
-    [Fact(Skip = "This test is not ready to pass yet.")]
+    [Fact]
     public void Arguments_VariousTypes()
     {
         var context = new TestContext();
@@ -678,9 +678,9 @@ public class RecordCommanderTests
                                                """);
 
         Assert.Equal(3, context.Logs.Count);
-        Assert.Equal("This is a log entry;x=12/31/2021;y=12/31/2021;z=3.14,ts=12:34:56;g=12345678-1234-1234-1234-1234567890AB", context.Logs[0]);
-        Assert.Equal("Another log entry;x=12/31/2021;y=12/31/2021;z=3.14,ts=12:34:56;g=12345678-1234-1234-1234-1234567890AB", context.Logs[1]);
-        Assert.Equal("Third log entry;x=12/31/2021;y=12/31/2021;z=3.14,ts=12:34:56;g=12345678-1234-1234-1234-1234567890AB", context.Logs[2]);
+        Assert.Equal("This is a log entry;x=12/31/2021 00:00:00;y=12/31/2021;z=3.14,ts=12:34:56;g=12345678-1234-1234-1234-1234567890ab", context.Logs[0]);
+        Assert.Equal("Another log entry;x=12/31/2021 00:00:00;y=12/31/2021;z=3.14,ts=12:34:56;g=12345678-1234-1234-1234-1234567890ab", context.Logs[1]);
+        Assert.Equal("Third log entry;x=12/31/2021 00:00:00;y=12/31/2021;z=3.14,ts=12:34:56;g=12345678-1234-1234-1234-1234567890ab", context.Logs[2]);
     }
 
     [Fact]

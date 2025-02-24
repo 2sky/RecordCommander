@@ -493,6 +493,40 @@ public static partial class RecordCommandRegistry<TContext>
         if (_customConverters.TryGetValue(targetType, out var converter))
             return converter(context, value);
 
+        if (targetType == typeof(DateTime))
+        {
+            if (DateTime.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var result))
+                return result;
+
+            throw new ArgumentException($"Failed to parse date value '{value}' for type {targetType.Name}, expected format yyyy-MM-dd");
+        }
+
+#if NET8_0_OR_GREATER
+        if (targetType == typeof(DateOnly))
+        {
+            if (DateOnly.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var result))
+                return result;
+
+            throw new ArgumentException($"Failed to parse date value '{value}' for type {targetType.Name}, expected format yyyy-MM-dd");
+        }
+#endif
+
+        if (targetType == typeof(TimeSpan))
+        {
+            if (TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out var result))
+                return result;
+
+            throw new ArgumentException($"Failed to parse time value '{value}' for type {targetType.Name}");
+        }
+
+        if (targetType == typeof(Guid))
+        {
+            if (Guid.TryParse(value, out var result))
+                return result;
+
+            throw new ArgumentException($"Failed to parse GUID value '{value}' for type {targetType.Name}");
+        }
+
         // Handle primitives (int, bool, etc.) using ChangeType
         try
         {
