@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using System.Text;
 
 namespace RecordCommander;
@@ -21,10 +21,7 @@ public static partial class RecordCommandRegistry<TContext>
         options ??= CommandGenerationOptions.Default;
 
         var recordType = record.GetType(); // NOTE: Only used to find the registration, use the registration's RecordType instead.
-        var registration = _registrations.Values.FirstOrDefault(r => r.RecordType == recordType)
-            // Fallback to the first that is assignable from the entity type.
-            ?? _registrations.Values.FirstOrDefault(r => r.RecordType.IsAssignableFrom(recordType))
-            ?? throw new InvalidOperationException($"No registration found for type {recordType}.");
+        var registration = GetRegistration(recordType);
 
         // Determine command name (apply alias if requested)
         var cmdName = options.PreferAliases
@@ -92,6 +89,64 @@ public static partial class RecordCommandRegistry<TContext>
 
         return builder.ToString().Trim();
     }
+
+    private static RecordRegistration<TContext> GetRegistration(Type recordType)
+    {
+        return _registrations.Values.FirstOrDefault(r => r.RecordType == recordType)
+               // Fallback to the first that is assignable from the entity type.
+               ?? _registrations.Values.FirstOrDefault(r => r.RecordType.IsAssignableFrom(recordType))
+               ?? throw new InvalidOperationException($"No registration found for type {recordType}.");
+    }
+
+    /// <summary>
+    /// Generates a basic usage example (one line) based on registration.
+    /// For example: add country &lt;code&gt; &lt;name&gt;
+    /// </summary>
+    public static string GetUsageExample<TRecord>(bool preferAliases = false)
+    {
+        var recordType = typeof(TRecord);
+        var registration = GetRegistration(recordType);
+
+        var cmdName = preferAliases ? Helpers.GetAliasOrDefault(registration.CommandName, recordType) : registration.CommandName;
+        var uniqueKeyPlaceholder = $"<{registration.UniqueKeyProperty.Name}>";
+        var positionalPlaceholders = registration.PositionalProperties
+            .Select(prop => $"<{(preferAliases ? (Helpers.GetAlias(prop) ?? prop.Name) : prop.Name)}>");
+        // TODO: Handle named arguments
+        return $"add {cmdName} {uniqueKeyPlaceholder} {string.Join(" ", positionalPlaceholders)}".Trim();
+    }
+
+    /// <summary>
+    /// Generates a detailed usage example including type descriptions as comments.
+    /// </summary>
+    public static string GetDetailedUsageExample<TRecord>(bool preferAliases = false)
+    {
+        var registration = GetRegistration(typeof(TRecord));
+
+        // Generate the basic usage example:
+        var usage = GetUsageExample<TRecord>(preferAliases);
+        var sb = new StringBuilder();
+        sb.AppendLine(usage);
+        sb.AppendLine("# Parameter descriptions:");
+
+        // Describe the unique key.
+        var uniqueKeyName = registration.UniqueKeyProperty.Name;
+        sb.AppendLine($"#   {uniqueKeyName} : {Helpers.GetTypeDescription(registration.UniqueKeyProperty.PropertyType)}");
+
+        // Describe each positional property.
+        foreach (var prop in registration.PositionalProperties)
+        {
+            var displayName = preferAliases ? (Helpers.GetAlias(prop) ?? prop.Name) : prop.Name;
+            sb.AppendLine($"#   {displayName} : {Helpers.GetTypeDescription(prop.PropertyType)}");
+        }
+
+        // (Optional) If you support named parameters or method mappings, include them here.
+        return sb.ToString().Trim();
+    }
+
+    // TODO: Add option to generate a sample prompt for a specific custom command.
+    //public static string GetCustomCommandPrompt(string commandName)
+    //{
+    //}
 }
 
 file static class Helpers
@@ -159,4 +214,43 @@ file static class Helpers
     /// returns the alias if available; otherwise, returns the default.
     /// </summary>
     public static string GetAliasOrDefault(string defaultName, Type type) => GetAlias(type) ?? defaultName;
+
+    /// <summary>
+    /// Returns a description string for a given type.
+    /// </summary>
+    public static string GetTypeDescription(Type type)
+    {
+        type = Nullable.GetUnderlyingType(type) ?? type;
+
+        if (type.IsEnum)
+        {
+            // TODO: Handle FlagsAttribute
+
+            // List valid enum names.
+            var names = string.Join("|", Enum.GetNames(type));
+            return $"enum ({names})";
+        }
+
+        if (type == typeof(string))
+            return "string (quoted if contains spaces)";
+
+        // TODO: sbyte, byte, short, ushort, uint, ulong, char
+        if (type == typeof(int) || type == typeof(long) || type == typeof(decimal) || type == typeof(float) || type == typeof(double))
+            return "number";
+
+        if (type == typeof(DateTime)
+#if NET8_0_OR_GREATER
+            || type == typeof(DateOnly)
+#endif
+            )
+            return "date (format yyyy-MM-dd)";
+
+        if (type == typeof(bool))
+            return "boolean (true/false)";
+
+        if (type.IsArray)
+            return $"array of {GetTypeDescription(type.GetElementType()!)}";
+
+        return type.Name.ToLowerInvariant();
+    }
 }

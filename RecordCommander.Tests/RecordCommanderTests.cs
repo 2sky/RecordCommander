@@ -50,6 +50,7 @@ public class Language
     public string? GetLabel(string culture) => labels.GetValueOrDefault(culture);
 }
 
+[Alias("ctr")]
 public class Country
 {
     public string Code { get; set; } = null!;
@@ -744,5 +745,40 @@ public class RecordCommanderTests
         var book = context.Books.First();
         Assert.Equal("be", book.OriginCountry?.Code);
         Assert.Equal("Belgium", book.OriginCountry?.Name);
+    }
+
+    [Fact]
+    public void Generation_GetUsageExample()
+    {
+        var country = RecordCommandRegistry<TestContext>.GetUsageExample<Country>();
+        Assert.Equal("add country <Code> <Name> <SpokenLanguages>", country);
+
+        var book = RecordCommandRegistry<TestContext>.GetUsageExample<Book>();
+        //Assert.Equal("add book <ISBN> <Title> <Author> --year=<PublicationYear>", book);
+        Assert.Equal("add book <ISBN> <Title> <Author> <PublicationYear>", book);
+    }
+
+    [Fact]
+    public void Generation_GetUsageExample_WithAlias()
+    {
+        var country = RecordCommandRegistry<TestContext>.GetUsageExample<Country>(preferAliases: true);
+        Assert.Equal("add ctr <Code> <Name> <langs>", country);
+
+        var book = RecordCommandRegistry<TestContext>.GetUsageExample<Book>(preferAliases: true);
+        //Assert.Equal("add bk <ISBN> <Title> <Author> --year=<year>", book);
+        Assert.Equal("add bk <ISBN> <Title> <Author> <year>", book);
+    }
+
+    [Fact]
+    public void Generation_GetDetailedUsageExample()
+    {
+        var country = RecordCommandRegistry<TestContext>.GetDetailedUsageExample<Country>();
+        Assert.Equal("""
+                     add country <Code> <Name> <SpokenLanguages>
+                     # Parameter descriptions:
+                     #   Code : string (quoted if contains spaces)
+                     #   Name : string (quoted if contains spaces)
+                     #   SpokenLanguages : array of string (quoted if contains spaces)
+                     """, country);
     }
 }
