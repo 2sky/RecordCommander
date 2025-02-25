@@ -834,6 +834,31 @@ public class RecordCommanderTests
     }
 
     [Fact]
+    public void Generation_GetDetailedUsageExample_SkipSpokenLanguagesAndFlags()
+    {
+        var country = RecordCommandRegistry<TestContext>.GetDetailedUsageExample<Country>(filterProperty: p => p.Name is not nameof(Country.SpokenLanguages));
+        Assert.Equal("""
+                     add country <Code> <Name>
+                     # Parameter descriptions:
+                     #   Code : string (quoted if contains spaces)
+                     #   Name : string (quoted if contains spaces)
+                     """, country);
+
+        var book = RecordCommandRegistry<TestContext>.GetDetailedUsageExample<Book>(filterProperty: p => p.Name is not nameof(Book.Flags));
+        Assert.Equal("""
+                     add Book <ISBN> <Title> <Author> <PublicationYear> [--Status=<Status> --Dimensions=<Dimensions> --OriginCountry=<OriginCountry>]
+                     # Parameter descriptions:
+                     #   ISBN : string (quoted if contains spaces)
+                     #   Title : string (quoted if contains spaces)
+                     #   Author : string (quoted if contains spaces)
+                     #   PublicationYear : number
+                     #   Status : enum (Available|Borrowed|Lost)
+                     #   Dimensions : unit
+                     #   OriginCountry : country
+                     """, book);
+    }
+
+    [Fact]
     public void Generation_GetCustomCommandPrompt()
     {
         var log4 = RecordCommandRegistry<TestContext>.GetCustomCommandPrompt("log4");

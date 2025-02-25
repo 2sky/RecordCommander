@@ -102,14 +102,14 @@ public static partial class RecordCommandRegistry<TContext>
     /// Generates a basic usage example (one line) based on registration.
     /// For example: add country &lt;code&gt; &lt;name&gt;
     /// </summary>
-    public static string GetUsageExample<TRecord>(bool preferAliases = false)
+    public static string GetUsageExample<TRecord>(bool preferAliases = false, Func<PropertyInfo, bool>? filterProperty = null)
     {
-        GetUsageExample<TRecord>(preferAliases, out _, out var example);
+        GetUsageExample<TRecord>(preferAliases, filterProperty, out _, out var example);
 
         return example.ToString();
     }
 
-    private static void GetUsageExample<TRecord>(bool preferAliases, out RecordRegistration<TContext> registration, out StringBuilder example)
+    private static void GetUsageExample<TRecord>(bool preferAliases, Func<PropertyInfo, bool>? filterProperty, out RecordRegistration<TContext> registration, out StringBuilder example)
     {
         var recordType = typeof(TRecord);
         registration = GetRegistration(recordType);
@@ -124,6 +124,9 @@ public static partial class RecordCommandRegistry<TContext>
         {
             foreach (var positionalProperty in registration.PositionalProperties)
             {
+                if (filterProperty != null && !filterProperty(positionalProperty))
+                    continue;
+
                 example.Append(" <");
                 example.Append(preferAliases ? (Helpers.GetAlias(positionalProperty) ?? positionalProperty.Name) : positionalProperty.Name);
                 example.Append('>');
@@ -137,6 +140,9 @@ public static partial class RecordCommandRegistry<TContext>
             var first = true;
             foreach (var prop in registration.NonPositionalProperties)
             {
+                if (filterProperty != null && !filterProperty(prop))
+                    continue;
+
                 if (first)
                     first = false;
                 else
@@ -157,9 +163,9 @@ public static partial class RecordCommandRegistry<TContext>
     /// <summary>
     /// Generates a detailed usage example including type descriptions as comments.
     /// </summary>
-    public static string GetDetailedUsageExample<TRecord>(bool preferAliases = false)
+    public static string GetDetailedUsageExample<TRecord>(bool preferAliases = false, Func<PropertyInfo, bool>? filterProperty = null)
     {
-        GetUsageExample<TRecord>(preferAliases, out var registration, out var sb);
+        GetUsageExample<TRecord>(preferAliases, filterProperty, out var registration, out var sb);
 
         // Add type descriptions as comments.
         sb.AppendLine();
@@ -172,6 +178,9 @@ public static partial class RecordCommandRegistry<TContext>
         // Describe each positional property.
         foreach (var prop in registration.PositionalProperties)
         {
+            if (filterProperty != null && !filterProperty(prop))
+                continue;
+
             var displayName = preferAliases ? (Helpers.GetAlias(prop) ?? prop.Name) : prop.Name;
             sb.AppendLine($"#   {displayName} : {Helpers.GetTypeDescription(prop.PropertyType)}");
         }
@@ -179,6 +188,9 @@ public static partial class RecordCommandRegistry<TContext>
         // Describe each non-positional property.
         foreach (var prop in registration.NonPositionalProperties)
         {
+            if (filterProperty != null && !filterProperty(prop))
+                continue;
+
             var displayName = preferAliases ? (Helpers.GetAlias(prop) ?? prop.Name) : prop.Name;
             sb.AppendLine($"#   {displayName} : {Helpers.GetTypeDescription(prop.PropertyType)}");
         }
