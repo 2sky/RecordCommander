@@ -9,7 +9,7 @@
     <!-- NuGet package settings -->
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <PackageId>RecordCommander</PackageId>
-    <Version>0.14.0</Version>
+    <Version>0.15.0</Version>
     <Authors>2sky NV</Authors>
     <Description>A lightweight C# library that enables command-based seeding and updating of records.</Description>
     <RepositoryUrl>https://github.com/2sky/RecordCommander</RepositoryUrl>
