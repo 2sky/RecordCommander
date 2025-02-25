@@ -49,7 +49,8 @@ public abstract class RecordRegistration<TContext>
 
         var nonPositionalProperties = new List<PropertyInfo>();
 
-        foreach (var property in recordType.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(p => p.CanWrite))
+        foreach (var property in recordType.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                                            .Where(p => p is { CanWrite: true, SetMethod.IsPublic: true }))
         {
             AllProperties[property.Name] = property;
 

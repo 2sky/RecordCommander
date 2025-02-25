@@ -86,6 +86,10 @@ public class Book
 
     [Alias("origin-country")]
     public Country? OriginCountry { get; set; }
+
+    public bool ShouldBeIgnored { get; private set; }
+
+    public void Ignore() => ShouldBeIgnored = true;
 }
 
 public enum BookStatus
