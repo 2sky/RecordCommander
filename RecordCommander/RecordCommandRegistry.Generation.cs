@@ -25,8 +25,8 @@ public static partial class RecordCommandRegistry<TContext>
 
         // Determine command name (apply alias if requested)
         var cmdName = options.PreferAliases
-            ? Helpers.GetAliasOrDefault(registration.CommandName, registration.RecordType)
-            : registration.CommandName;
+            ? Helpers.GetAliasOrDefault(registration.Name, registration.RecordType)
+            : registration.Name;
 
         var builder = new StringBuilder();
         builder.Append("add ");
@@ -107,7 +107,7 @@ public static partial class RecordCommandRegistry<TContext>
         var recordType = typeof(TRecord);
         var registration = GetRegistration(recordType);
 
-        var cmdName = preferAliases ? Helpers.GetAliasOrDefault(registration.CommandName, recordType) : registration.CommandName;
+        var cmdName = preferAliases ? Helpers.GetAliasOrDefault(registration.Name, recordType) : registration.Name;
         var uniqueKeyPlaceholder = $"<{registration.UniqueKeyProperty.Name}>";
         var positionalPlaceholders = registration.PositionalProperties
             .Select(prop => $"<{(preferAliases ? (Helpers.GetAlias(prop) ?? prop.Name) : prop.Name)}>");

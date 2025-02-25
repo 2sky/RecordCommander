@@ -119,8 +119,7 @@ public class RecordCommanderTests
 
         try
         {
-            RecordCommandRegistry.Register<TestContext, Language>(
-                commandName: "language",
+            RecordCommandRegistry<TestContext>.Register(
                 collectionAccessor: ctx => ctx.Languages,
                 uniqueKeySelector: x => x.Key,
                 positionalPropertySelectors: [x => x.Name]
@@ -134,7 +133,7 @@ public class RecordCommanderTests
         try
         {
             RecordCommandRegistry.Register<TestContext, Country>(
-                commandName: "country",
+                name: "country",
                 collectionAccessor: ctx => ctx.Countries,
                 uniqueKeySelector: x => x.Code,
                 positionalPropertySelectors: [x => x.Name, x => x.SpokenLanguages]
@@ -147,8 +146,7 @@ public class RecordCommanderTests
 
         try
         {
-            RecordCommandRegistry.Register<TestContext, Book>(
-                commandName: "book",
+            RecordCommandRegistry<TestContext>.Register(
                 findRecord: (ctx, isbn) => ctx.FindBook(isbn),
                 createRecord: (ctx, isbn) => ctx.CreateBook(isbn),
                 uniqueKeySelector: x => x.ISBN,
@@ -516,7 +514,7 @@ public class RecordCommanderTests
         var options = new CommandGenerationOptions();
         var lang = new Language { Key = "en", Name = "English" };
         var cmd = RecordCommandRegistry<TestContext>.GenerateCommand(lang, options);
-        Assert.Equal("add language en English", cmd);
+        Assert.Equal("add Language en English", cmd);
     }
 
     [Fact]
@@ -525,7 +523,7 @@ public class RecordCommanderTests
         var options = new CommandGenerationOptions(usePositionalProperties: true);
         var lang = new Language { Key = "en", Name = "English" };
         var cmd = RecordCommandRegistry<TestContext>.GenerateCommand(lang, options);
-        Assert.Equal("add language en English", cmd);
+        Assert.Equal("add Language en English", cmd);
     }
 
     [Fact]
@@ -534,7 +532,7 @@ public class RecordCommanderTests
         var options = new CommandGenerationOptions(usePositionalProperties: false);
         var lang = new Language { Key = "en", Name = "English" };
         var cmd = RecordCommandRegistry<TestContext>.GenerateCommand(lang, options);
-        Assert.Equal("add language en --Name=English", cmd);
+        Assert.Equal("add Language en --Name=English", cmd);
     }
 
     [Fact]
@@ -551,7 +549,7 @@ public class RecordCommanderTests
     {
         var lang = new Language { Key = "en", Name = "English Language" };
         var cmd = RecordCommandRegistry<TestContext>.GenerateCommand(lang);
-        Assert.Equal("add language en \"English Language\"", cmd);
+        Assert.Equal("add Language en \"English Language\"", cmd);
     }
 
     [Fact]
@@ -560,7 +558,7 @@ public class RecordCommanderTests
         var context = new TestContext();
 
         // Add books via commands (keep as regular string for newlines)
-        const string dummyBooks = "add book 978-3-16-148410-0 \"The Book Title\" \"John Doe\" 2021\nadd book 978-3-16-148410-1 \"Another Book\" \"Jane Doe\" 2022\nadd book 978-3-16-148410-2 \"Third Book\" \"John Doe\" 2023";
+        const string dummyBooks = "add Book 978-3-16-148410-0 \"The Book Title\" \"John Doe\" 2021\nadd Book 978-3-16-148410-1 \"Another Book\" \"Jane Doe\" 2022\nadd Book 978-3-16-148410-2 \"Third Book\" \"John Doe\" 2023";
         RecordCommandRegistry.RunMany(context, dummyBooks);
 
         // Generate commands for each book
@@ -748,6 +746,43 @@ public class RecordCommanderTests
     }
 
     [Fact]
+    public void HasChecks()
+    {
+        Assert.True(RecordCommandRegistry<TestContext>.HasCustomConverter(typeof(Country)));
+        Assert.True(RecordCommandRegistry<TestContext>.HasCustomConverter(typeof(Unit)));
+
+        Assert.True(RecordCommandRegistry<TestContext>.IsRegistered(nameof(Country)));
+        Assert.True(RecordCommandRegistry<TestContext>.IsRegistered(nameof(Language)));
+        Assert.True(RecordCommandRegistry<TestContext>.IsRegistered(nameof(Book)));
+
+        Assert.True(RecordCommandRegistry<TestContext>.HasExtraCommand("log"));
+        Assert.True(RecordCommandRegistry<TestContext>.HasExtraCommand("log2"));
+        Assert.True(RecordCommandRegistry<TestContext>.HasExtraCommand("log3"));
+
+        Assert.False(RecordCommandRegistry<TestContext>.IsRegistered(nameof(String)));
+        Assert.False(RecordCommandRegistry<TestContext>.IsRegistered("unknown"));
+        Assert.False(RecordCommandRegistry<TestContext>.HasExtraCommand("unknown"));
+    }
+
+    [Fact]
+    public void Register_Collections_ShouldContain()
+    {
+        // Check if the collections contain the expected records.
+        var recordTypes = RecordCommandRegistry<TestContext>.RecordTypes;
+        Assert.Contains(typeof(Language), recordTypes);
+        Assert.Contains(typeof(Country), recordTypes);
+
+        var extraCommand = RecordCommandRegistry<TestContext>.ExtraCommands;
+        Assert.Contains("log", extraCommand);
+        Assert.Contains("log2", extraCommand);
+        Assert.Contains("log3", extraCommand);
+
+        var customConverters = RecordCommandRegistry<TestContext>.CustomConverters;
+        Assert.Contains(typeof(Unit), customConverters);
+        Assert.Contains(typeof(Country), customConverters);
+    }
+
+    [Fact]
     public void Generation_GetUsageExample()
     {
         var country = RecordCommandRegistry<TestContext>.GetUsageExample<Country>();
@@ -755,7 +790,7 @@ public class RecordCommanderTests
 
         var book = RecordCommandRegistry<TestContext>.GetUsageExample<Book>();
         //Assert.Equal("add book <ISBN> <Title> <Author> --year=<PublicationYear>", book);
-        Assert.Equal("add book <ISBN> <Title> <Author> <PublicationYear>", book);
+        Assert.Equal("add Book <ISBN> <Title> <Author> <PublicationYear>", book);
     }
 
     [Fact]
@@ -790,6 +825,13 @@ public class RecordCommanderTests
     }
 
     [Fact]
+    public void Generation_GetCustomCommandPrompt_WithOptional()
+    {
+        var log2 = RecordCommandRegistry<TestContext>.GetCustomCommandPrompt("log2");
+        Assert.Equal("log2 <log> [<b> <x>]", log2);
+    }
+
+    [Fact]
     public void Generation_GetCustomCommandPrompt_DescribeParameters()
     {
         var log4 = RecordCommandRegistry<TestContext>.GetCustomCommandPrompt("log4", true);
@@ -803,5 +845,14 @@ public class RecordCommanderTests
                      #   g : guid
 
                      """, log4);
+    }
+
+    [Fact]
+    public void CantRegisterReservedCommand()
+    {
+        var ex = Assert.Throws<ArgumentException>(() =>
+            RecordCommandRegistry<TestContext>.RegisterCommand("add", (TestContext context, string log) => context.Logs.Add(log))
+        );
+        Assert.Contains("is reserved", ex.Message);
     }
 }

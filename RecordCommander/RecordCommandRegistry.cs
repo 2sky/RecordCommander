@@ -15,18 +15,18 @@ public static class RecordCommandRegistry
     /// </summary>
     /// <typeparam name="TContext">Type of the context (for example, your data container).</typeparam>
     /// <typeparam name="TRecord">Record type (for example, Language or Country).</typeparam>
-    /// <param name="commandName">The command token to use (e.g. "language"), this is case-insensitive.</param>
+    /// <param name="name">The command token to use (e.g. "language"), this is case-insensitive.</param>
     /// <param name="collectionAccessor">A lambda to extract the collection (e.g. ctx => ctx.Languages).</param>
     /// <param name="uniqueKeySelector">An expression to select the unique key property (e.g. x => x.Key).</param>
     /// <param name="positionalPropertySelectors">Expressions for additional (positional) properties.</param>
     public static RecordRegistration<TContext, TRecord> Register<TContext, TRecord>(
-        string commandName,
+        string name,
         Func<TContext, IList<TRecord>> collectionAccessor,
         Expression<Func<TRecord, string>> uniqueKeySelector,
         params Expression<Func<TRecord, object>>[] positionalPropertySelectors)
         where TRecord : new()
     {
-        return RecordCommandRegistry<TContext>.Register(commandName, collectionAccessor, uniqueKeySelector, positionalPropertySelectors);
+        return RecordCommandRegistry<TContext>.Register(name, collectionAccessor, uniqueKeySelector, positionalPropertySelectors);
     }
 
     /// <summary>
@@ -34,19 +34,19 @@ public static class RecordCommandRegistry
     /// </summary>
     /// <typeparam name="TContext">Type of the context (for example, your data container).</typeparam>
     /// <typeparam name="TRecord">Record type (for example, Language or Country).</typeparam>
-    /// <param name="commandName">The command token to use (e.g. "language"), this is case-insensitive.</param>
+    /// <param name="name">The command token to use (e.g. "language"), this is case-insensitive.</param>
     /// <param name="findRecord">A lambda to find an existing record (e.g. (ctx, key) => ctx.Languages.FirstOrDefault(x => x.Key == key)).</param>
     /// <param name="createRecord">A lambda to create a new record and track it on the context (e.g. (ctx, key) => { var lang = new Language { Key = key }; ctx.Languages.Add(lang); return lang; }).</param>
     /// <param name="uniqueKeySelector">An expression to select the unique key property (e.g. x => x.Key).</param>
     /// <param name="positionalPropertySelectors">Expressions for additional (positional) properties.</param>
     public static RecordRegistration<TContext, TRecord> Register<TContext, TRecord>(
-        string commandName,
+        string name,
         Func<TContext, string, TRecord?> findRecord,
         Func<TContext, string, TRecord> createRecord,
         Expression<Func<TRecord, string>> uniqueKeySelector,
         params Expression<Func<TRecord, object>>[] positionalPropertySelectors)
     {
-        return RecordCommandRegistry<TContext>.Register(commandName, findRecord, createRecord, uniqueKeySelector, positionalPropertySelectors);
+        return RecordCommandRegistry<TContext>.Register(name, findRecord, createRecord, uniqueKeySelector, positionalPropertySelectors);
     }
 
     /// <summary>
@@ -54,17 +54,17 @@ public static class RecordCommandRegistry
     /// </summary>
     /// <typeparam name="TContext">Type of the context (for example, your data container).</typeparam>
     /// <typeparam name="TRecord">Record type (for example, Language or Country).</typeparam>
-    /// <param name="commandName">The command token to use (e.g. "language"), this is case-insensitive.</param>
+    /// <param name="name">The command token to use (e.g. "language"), this is case-insensitive.</param>
     /// <param name="findOrCreateRecord">A lambda to find an existing record or create a new record (e.g. (ctx, key) => ctx.GetOrCreateLanguage(key)).</param>
     /// <param name="uniqueKeySelector">An expression to select the unique key property (e.g. x => x.Key).</param>
     /// <param name="positionalPropertySelectors">Expressions for additional (positional) properties.</param>
     public static RecordRegistration<TContext, TRecord> Register<TContext, TRecord>(
-        string commandName,
+        string name,
         Func<TContext, string, TRecord> findOrCreateRecord,
         Expression<Func<TRecord, string>> uniqueKeySelector,
         params Expression<Func<TRecord, object>>[] positionalPropertySelectors)
     {
-        return RecordCommandRegistry<TContext>.Register(commandName, findOrCreateRecord, uniqueKeySelector, positionalPropertySelectors);
+        return RecordCommandRegistry<TContext>.Register(name, findOrCreateRecord, uniqueKeySelector, positionalPropertySelectors);
     }
 
     /// <summary>
@@ -103,9 +103,9 @@ public static partial class RecordCommandRegistry<TContext>
     private static readonly Dictionary<Type, Func<TContext, string, object?>> _customConverters = [];
 
     /// <summary>
-    /// Checks if an add command is registered.
+    /// Checks if an "add" record is registered.
     /// </summary>
-    public static bool IsRegistered(string commandName) => _registrations.ContainsKey(commandName);
+    public static bool IsRegistered(string recordName) => _registrations.ContainsKey(recordName);
 
     /// <summary>
     /// Check if we have a custom command registered besides "add".
@@ -118,61 +118,124 @@ public static partial class RecordCommandRegistry<TContext>
     public static bool HasCustomConverter(Type type) => _customConverters.ContainsKey(type);
 
     /// <summary>
+    /// Gets the registered record types.
+    /// </summary>
+    public static IReadOnlyCollection<Type> RecordTypes => _registrations.Values.Select(r => r.RecordType).ToArray();
+
+    /// <summary>
+    /// Gets the registered extra command names besides "add".
+    /// </summary>
+    public static IReadOnlyCollection<string> ExtraCommands => _extraCommands.Keys;
+
+    /// <summary>
+    /// Gets the registered custom converters.
+    /// </summary>
+    public static IReadOnlyCollection<Type> CustomConverters => _customConverters.Keys;
+
+    /// <summary>
     /// Registers a record type with its configuration.
     /// </summary>
     /// <typeparam name="TRecord">Record type (for example, Language or Country).</typeparam>
-    /// <param name="commandName">The command token to use (e.g. "language"), this is case-insensitive.</param>
     /// <param name="collectionAccessor">A lambda to extract the collection (e.g. ctx => ctx.Languages).</param>
     /// <param name="uniqueKeySelector">An expression to select the unique key property (e.g. x => x.Key).</param>
     /// <param name="positionalPropertySelectors">Expressions for additional (positional) properties.</param>
     public static RecordRegistration<TContext, TRecord> Register<TRecord>(
-        string commandName,
         Func<TContext, IList<TRecord>> collectionAccessor,
         Expression<Func<TRecord, string>> uniqueKeySelector,
         params Expression<Func<TRecord, object>>[] positionalPropertySelectors)
         where TRecord : new()
     {
-        return Register(commandName, collectionAccessor, null, null, uniqueKeySelector, positionalPropertySelectors);
+        return Register(typeof(TRecord).Name, collectionAccessor, null, null, uniqueKeySelector, positionalPropertySelectors);
     }
 
     /// <summary>
     /// Registers a record type with its configuration.
     /// </summary>
     /// <typeparam name="TRecord">Record type (for example, Language or Country).</typeparam>
-    /// <param name="commandName">The command token to use (e.g. "language"), this is case-insensitive.</param>
+    /// <param name="recordName">The token to use (e.g. "language"), this is case-insensitive.</param>
+    /// <param name="collectionAccessor">A lambda to extract the collection (e.g. ctx => ctx.Languages).</param>
+    /// <param name="uniqueKeySelector">An expression to select the unique key property (e.g. x => x.Key).</param>
+    /// <param name="positionalPropertySelectors">Expressions for additional (positional) properties.</param>
+    public static RecordRegistration<TContext, TRecord> Register<TRecord>(
+        string recordName,
+        Func<TContext, IList<TRecord>> collectionAccessor,
+        Expression<Func<TRecord, string>> uniqueKeySelector,
+        params Expression<Func<TRecord, object>>[] positionalPropertySelectors)
+        where TRecord : new()
+    {
+        return Register(recordName, collectionAccessor, null, null, uniqueKeySelector, positionalPropertySelectors);
+    }
+
+    /// <summary>
+    /// Registers a record type with its configuration.
+    /// </summary>
+    /// <typeparam name="TRecord">Record type (for example, Language or Country).</typeparam>
     /// <param name="findRecord">A lambda to find an existing record (e.g. (ctx, key) => ctx.Languages.FirstOrDefault(x => x.Key == key)).</param>
     /// <param name="createRecord">A lambda to create a new record and track it on the context (e.g. (ctx, key) => { var lang = new Language { Key = key }; ctx.Languages.Add(lang); return lang; }).</param>
     /// <param name="uniqueKeySelector">An expression to select the unique key property (e.g. x => x.Key).</param>
     /// <param name="positionalPropertySelectors">Expressions for additional (positional) properties.</param>
     public static RecordRegistration<TContext, TRecord> Register<TRecord>(
-        string commandName,
         Func<TContext, string, TRecord?> findRecord,
         Func<TContext, string, TRecord> createRecord,
         Expression<Func<TRecord, string>> uniqueKeySelector,
         params Expression<Func<TRecord, object>>[] positionalPropertySelectors)
     {
-        return Register(commandName, null, findRecord, createRecord, uniqueKeySelector, positionalPropertySelectors);
+        return Register(typeof(TRecord).Name, null, findRecord, createRecord, uniqueKeySelector, positionalPropertySelectors);
     }
 
     /// <summary>
     /// Registers a record type with its configuration.
     /// </summary>
     /// <typeparam name="TRecord">Record type (for example, Language or Country).</typeparam>
-    /// <param name="commandName">The command token to use (e.g. "language"), this is case-insensitive.</param>
+    /// <param name="recordName">The token to use (e.g. "language"), this is case-insensitive.</param>
+    /// <param name="findRecord">A lambda to find an existing record (e.g. (ctx, key) => ctx.Languages.FirstOrDefault(x => x.Key == key)).</param>
+    /// <param name="createRecord">A lambda to create a new record and track it on the context (e.g. (ctx, key) => { var lang = new Language { Key = key }; ctx.Languages.Add(lang); return lang; }).</param>
+    /// <param name="uniqueKeySelector">An expression to select the unique key property (e.g. x => x.Key).</param>
+    /// <param name="positionalPropertySelectors">Expressions for additional (positional) properties.</param>
+    public static RecordRegistration<TContext, TRecord> Register<TRecord>(
+        string recordName,
+        Func<TContext, string, TRecord?> findRecord,
+        Func<TContext, string, TRecord> createRecord,
+        Expression<Func<TRecord, string>> uniqueKeySelector,
+        params Expression<Func<TRecord, object>>[] positionalPropertySelectors)
+    {
+        return Register(recordName, null, findRecord, createRecord, uniqueKeySelector, positionalPropertySelectors);
+    }
+
+    /// <summary>
+    /// Registers a record type with its configuration.
+    /// </summary>
+    /// <typeparam name="TRecord">Record type (for example, Language or Country).</typeparam>
     /// <param name="findOrCreateRecord">A lambda to find an existing record or create a new record (e.g. (ctx, key) => ctx.GetOrCreateLanguage(key)).</param>
     /// <param name="uniqueKeySelector">An expression to select the unique key property (e.g. x => x.Key).</param>
     /// <param name="positionalPropertySelectors">Expressions for additional (positional) properties.</param>
     public static RecordRegistration<TContext, TRecord> Register<TRecord>(
-        string commandName,
         Func<TContext, string, TRecord> findOrCreateRecord,
         Expression<Func<TRecord, string>> uniqueKeySelector,
         params Expression<Func<TRecord, object>>[] positionalPropertySelectors)
     {
-        return Register(commandName, null, findOrCreateRecord, findOrCreateRecord, uniqueKeySelector, positionalPropertySelectors);
+        return Register(typeof(TRecord).Name, null, findOrCreateRecord, findOrCreateRecord, uniqueKeySelector, positionalPropertySelectors);
+    }
+
+    /// <summary>
+    /// Registers a record type with its configuration.
+    /// </summary>
+    /// <typeparam name="TRecord">Record type (for example, Language or Country).</typeparam>
+    /// <param name="recordName">The token to use (e.g. "language"), this is case-insensitive.</param>
+    /// <param name="findOrCreateRecord">A lambda to find an existing record or create a new record (e.g. (ctx, key) => ctx.GetOrCreateLanguage(key)).</param>
+    /// <param name="uniqueKeySelector">An expression to select the unique key property (e.g. x => x.Key).</param>
+    /// <param name="positionalPropertySelectors">Expressions for additional (positional) properties.</param>
+    public static RecordRegistration<TContext, TRecord> Register<TRecord>(
+        string recordName,
+        Func<TContext, string, TRecord> findOrCreateRecord,
+        Expression<Func<TRecord, string>> uniqueKeySelector,
+        params Expression<Func<TRecord, object>>[] positionalPropertySelectors)
+    {
+        return Register(recordName, null, findOrCreateRecord, findOrCreateRecord, uniqueKeySelector, positionalPropertySelectors);
     }
 
     private static RecordRegistration<TContext, TRecord> Register<TRecord>(
-        string commandName,
+        string recordName,
         Func<TContext, IList<TRecord>>? collectionAccessor,
         Func<TContext, string, TRecord?>? findRecord,
         Func<TContext, string, TRecord>? createRecord,
@@ -186,13 +249,13 @@ public static partial class RecordCommandRegistry<TContext>
 
         RecordRegistration<TContext, TRecord> registration;
         if (collectionAccessor is not null)
-            registration = new(commandName, collectionAccessor, uniqueKeyProp, positionalProps);
+            registration = new(recordName, collectionAccessor, uniqueKeyProp, positionalProps);
         else if (findRecord is not null && createRecord is not null)
-            registration = new(commandName, uniqueKeyProp, positionalProps, findRecord, createRecord);
+            registration = new(recordName, uniqueKeyProp, positionalProps, findRecord, createRecord);
         else
             throw new ArgumentException("Either collectionAccessor or findRecord and createRecord must be provided");
 
-        _registrations[commandName] = registration;
+        _registrations[recordName] = registration;
 
         var aliasAttributes = typeof(TRecord).GetCustomAttributes<AliasAttribute>();
         foreach (var alias in aliasAttributes)
@@ -202,12 +265,12 @@ public static partial class RecordCommandRegistry<TContext>
     }
 
     /// <summary>
-    /// Adds an alias for a command.
+    /// Adds an alias for a record.
     /// </summary>
-    public static RecordRegistration<TContext> AddAlias(string commandName, string alias)
+    public static RecordRegistration<TContext> AddAlias(string recordName, string alias)
     {
-        if (!_registrations.TryGetValue(commandName, out var registration))
-            throw new ArgumentException($"Command '{commandName}' is not registered", nameof(commandName));
+        if (!_registrations.TryGetValue(recordName, out var registration))
+            throw new ArgumentException($"Record '{recordName}' is not registered", nameof(recordName));
 
         _registrations[alias] = registration;
 
@@ -219,7 +282,7 @@ public static partial class RecordCommandRegistry<TContext>
     /// </summary>
     public static void RegisterCommand(string commandName, Delegate action)
     {
-        if (commandName is "add")
+        if (string.Equals(commandName, "add", StringComparison.OrdinalIgnoreCase))
             throw new ArgumentException("Command name 'add' is reserved", nameof(commandName));
 
         // Validate the action signature.

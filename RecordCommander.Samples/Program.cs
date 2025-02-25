@@ -37,14 +37,14 @@
         {
             // Register the record types.
             RecordCommandRegistry.Register<MyData, Language>(
-                commandName: "language",
+                name: "language",
                 collectionAccessor: ctx => ctx.Languages,
                 uniqueKeySelector: x => x.Key,
                 positionalPropertySelectors: [x => x.Name]
             );
 
             RecordCommandRegistry.Register<MyData, Country>(
-                commandName: "country",
+                name: "country",
                 collectionAccessor: ctx => ctx.Countries,
                 uniqueKeySelector: x => x.Code,
                 positionalPropertySelectors: [x => x.Name]

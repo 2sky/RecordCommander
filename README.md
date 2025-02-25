@@ -54,7 +54,7 @@ using RecordCommander;
 
 // Register the Language record.
 RecordCommandRegistry.Register<MyData, Language>(
-    commandName: "language",
+    name: "language",
     collectionAccessor: ctx => ctx.Languages,
     uniqueKeySelector: x => x.Key,
     positionalPropertySelectors: new Expression<Func<Language, object>>[] { x => x.Name }
@@ -62,7 +62,7 @@ RecordCommandRegistry.Register<MyData, Language>(
 
 // Register the Country record.
 RecordCommandRegistry.Register<MyData, Country>(
-    commandName: "country",
+    name: "country",
     collectionAccessor: ctx => ctx.Countries,
     uniqueKeySelector: x => x.Code,
     positionalPropertySelectors: new Expression<Func<Country, object>>[] { x => x.Name, x => x.SpokenLanguages }

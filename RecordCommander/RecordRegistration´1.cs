@@ -8,17 +8,17 @@ namespace RecordCommander;
 public abstract class RecordRegistration<TContext>
 {
     /// <summary>
-    /// The command name used to identify this record type.
+    /// The name used to identify this record type, will match record type name by default.
     /// </summary>
-    public string CommandName { get; }
+    public string Name { get; }
 
     /// <summary>
-    /// The type of the record.
+    /// The CLR type of the record.
     /// </summary>
     public Type RecordType { get; }
 
     /// <summary>
-    /// The property that uniquely identifies a record.
+    /// The property that uniquely identifies a record. Is always used as first argument.
     /// </summary>
     public PropertyInfo UniqueKeyProperty { get; }
 
@@ -34,9 +34,9 @@ public abstract class RecordRegistration<TContext>
     // TODO: Should we use read-only versions for this for safety?
     public List<PropertyInfo> PositionalProperties { get; }
 
-    protected RecordRegistration(string commandName, Type recordType, PropertyInfo uniqueKeyProperty, List<PropertyInfo> positionalProperties)
+    protected RecordRegistration(string name, Type recordType, PropertyInfo uniqueKeyProperty, List<PropertyInfo> positionalProperties)
     {
-        CommandName = commandName;
+        Name = name;
         RecordType = recordType;
         UniqueKeyProperty = uniqueKeyProperty;
         PositionalProperties = positionalProperties;
@@ -58,7 +58,7 @@ public abstract class RecordRegistration<TContext>
     public abstract object FindOrCreateRecord(TContext context, string uniqueKey);
 
     /// <summary>
-    /// Add an alias for this command.
+    /// Add an alias for this record, e.g. "lng" for "language".
     /// </summary>
-    public RecordRegistration<TContext> AddAlias(string alias) => RecordCommandRegistry<TContext>.AddAlias(CommandName, alias);
+    public RecordRegistration<TContext> AddAlias(string alias) => RecordCommandRegistry<TContext>.AddAlias(Name, alias);
 }

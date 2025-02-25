@@ -10,11 +10,11 @@ public class RecordRegistration<TContext, TRecord> : RecordRegistration<TContext
     private readonly Func<TContext, string, TRecord?> _findRecord;
     private readonly Func<TContext, string, TRecord> _createRecord;
 
-    public RecordRegistration(string commandName,
+    public RecordRegistration(string name,
         Func<TContext, IList<TRecord>> collectionAccessor,
         PropertyInfo uniqueKeyProperty,
         List<PropertyInfo> positionalProperties)
-        : base(commandName, typeof(TRecord), uniqueKeyProperty, positionalProperties)
+        : base(name, typeof(TRecord), uniqueKeyProperty, positionalProperties)
     {
         _findRecord = (context, uniqueKey) =>
         {
@@ -53,12 +53,12 @@ public class RecordRegistration<TContext, TRecord> : RecordRegistration<TContext
         };
     }
 
-    public RecordRegistration(string commandName,
+    public RecordRegistration(string name,
         PropertyInfo uniqueKeyProperty,
         List<PropertyInfo> positionalProperties,
         Func<TContext, string, TRecord?> findRecord,
         Func<TContext, string, TRecord> createRecord)
-        : base(commandName, typeof(TRecord), uniqueKeyProperty, positionalProperties)
+        : base(name, typeof(TRecord), uniqueKeyProperty, positionalProperties)
     {
         _findRecord = findRecord;
         _createRecord = createRecord;
