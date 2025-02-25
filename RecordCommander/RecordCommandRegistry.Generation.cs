@@ -173,7 +173,7 @@ public static partial class RecordCommandRegistry<TContext>
 
         // Describe the unique key.
         var uniqueKey = registration.UniqueKeyProperty;
-        sb.AppendLine($"#   {uniqueKey.Name} : {Helpers.GetTypeDescription(uniqueKey.PropertyType)}");
+        sb.AppendLine($"#   {uniqueKey.Name} : {Helpers.GetTypeDescription(uniqueKey.PropertyType, _customConverterTypeDescriptions)}");
 
         // Describe each positional property.
         foreach (var prop in registration.PositionalProperties)
@@ -182,7 +182,7 @@ public static partial class RecordCommandRegistry<TContext>
                 continue;
 
             var displayName = preferAliases ? (Helpers.GetAlias(prop) ?? prop.Name) : prop.Name;
-            sb.AppendLine($"#   {displayName} : {Helpers.GetTypeDescription(prop.PropertyType)}");
+            sb.AppendLine($"#   {displayName} : {Helpers.GetTypeDescription(prop.PropertyType, _customConverterTypeDescriptions)}");
         }
 
         // Describe each non-positional property.
@@ -192,7 +192,7 @@ public static partial class RecordCommandRegistry<TContext>
                 continue;
 
             var displayName = preferAliases ? (Helpers.GetAlias(prop) ?? prop.Name) : prop.Name;
-            sb.AppendLine($"#   {displayName} : {Helpers.GetTypeDescription(prop.PropertyType)}");
+            sb.AppendLine($"#   {displayName} : {Helpers.GetTypeDescription(prop.PropertyType, _customConverterTypeDescriptions)}");
         }
 
         // (Optional) If you support method mappings, include them here.
@@ -237,7 +237,7 @@ public static partial class RecordCommandRegistry<TContext>
 
             // Describe the parameters by type
             foreach (var param in parameters)
-                builder.AppendLine($"#   {param.Name} : {Helpers.GetTypeDescription(param.ParameterType)}");
+                builder.AppendLine($"#   {param.Name} : {Helpers.GetTypeDescription(param.ParameterType, _customConverterTypeDescriptions)}");
         }
 
         return builder.ToString();
@@ -313,7 +313,7 @@ file static class Helpers
     /// <summary>
     /// Returns a description string for a given type.
     /// </summary>
-    public static string GetTypeDescription(Type type)
+    public static string GetTypeDescription(Type type, Dictionary<Type, string> customDescriptions)
     {
         type = Nullable.GetUnderlyingType(type) ?? type;
 
@@ -344,7 +344,10 @@ file static class Helpers
             return "boolean (true/false)";
 
         if (type.IsArray)
-            return $"array of {GetTypeDescription(type.GetElementType()!)}";
+            return $"array of {GetTypeDescription(type.GetElementType()!, customDescriptions)}";
+
+        if (customDescriptions.TryGetValue(type, out var customDesc))
+            return customDesc;
 
         return type.Name.ToLowerInvariant();
     }

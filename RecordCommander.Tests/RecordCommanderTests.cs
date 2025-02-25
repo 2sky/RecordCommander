@@ -1,4 +1,4 @@
-﻿// ReSharper disable InconsistentNaming
+// ReSharper disable InconsistentNaming
 // ReSharper disable StringLiteralTypo
 // ReSharper disable UnusedMember.Global
 
@@ -192,8 +192,8 @@ public class RecordCommanderTests
         });
 
         // Custom conversion
-        RecordCommandRegistry<TestContext>.RegisterCustomConverter((_, s) => Unit.Parse(s));
-        RecordCommandRegistry<TestContext>.RegisterCustomConverter((ctx, code) => ctx.Countries.Find(c => c.Code == code));
+        RecordCommandRegistry<TestContext>.RegisterCustomConverter((_, s) => Unit.Parse(s), "string (e.g. \"20 kg\")");
+        RecordCommandRegistry<TestContext>.RegisterCustomConverter((ctx, code) => ctx.Countries.Find(c => c.Code == code), "string <two-letter-country-code>");
     }
 
     [Fact]
@@ -828,8 +828,8 @@ public class RecordCommanderTests
                      #   PublicationYear : number
                      #   Status : enum (Available|Borrowed|Lost)
                      #   Flags : enum (None|Fiction|NonFiction|Mystery|Thriller|Romance|Fantasy|ScienceFiction)
-                     #   Dimensions : unit
-                     #   OriginCountry : country
+                     #   Dimensions : string (e.g. "20 kg")
+                     #   OriginCountry : string <two-letter-country-code>
                      """, book);
     }
 
@@ -853,8 +853,8 @@ public class RecordCommanderTests
                      #   Author : string (quoted if contains spaces)
                      #   PublicationYear : number
                      #   Status : enum (Available|Borrowed|Lost)
-                     #   Dimensions : unit
-                     #   OriginCountry : country
+                     #   Dimensions : string (e.g. "20 kg")
+                     #   OriginCountry : string <two-letter-country-code>
                      """, book);
     }
 

@@ -101,6 +101,7 @@ public static partial class RecordCommandRegistry<TContext>
     private static readonly Dictionary<string, CustomCommand> _extraCommands = new(StringComparer.OrdinalIgnoreCase);
 
     private static readonly Dictionary<Type, Func<TContext, string, object?>> _customConverters = [];
+    private static readonly Dictionary<Type, string> _customConverterTypeDescriptions = [];
 
     /// <summary>
     /// Checks if an "add" record is registered.
@@ -297,9 +298,12 @@ public static partial class RecordCommandRegistry<TContext>
     /// <summary>
     /// Registers a custom converter for a specific type.
     /// </summary>
-    public static void RegisterCustomConverter<T>(Func<TContext, string, T> converter)
+    public static void RegisterCustomConverter<T>(Func<TContext, string, T> converter, string? typeDescription = null)
     {
         _customConverters[typeof(T)] = (ctx, value) => converter(ctx, value);
+
+        if (!string.IsNullOrEmpty(typeDescription))
+            _customConverterTypeDescriptions[typeof(T)] = typeDescription;
     }
 
     /// <summary>
