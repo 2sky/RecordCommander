@@ -1,6 +1,8 @@
-// ReSharper disable InconsistentNaming
+﻿// ReSharper disable InconsistentNaming
 // ReSharper disable StringLiteralTypo
 // ReSharper disable UnusedMember.Global
+
+using System.Diagnostics;
 
 namespace RecordCommander.Tests;
 
@@ -51,6 +53,7 @@ public class Language
 }
 
 [Alias("ctr")]
+[DebuggerDisplay("{Code,nq} - {Name,nq}")]
 public class Country
 {
     public string Code { get; set; } = null!;
@@ -61,6 +64,7 @@ public class Country
 }
 
 [Alias("bk")]
+[DebuggerDisplay("{Title,nq} ({PublicationYear})")]
 public class Book
 {
     // Unique key for the book.
@@ -856,6 +860,46 @@ public class RecordCommanderTests
                      #   Dimensions : string (e.g. "20 kg")
                      #   OriginCountry : string <two-letter-country-code>
                      """, book);
+    }
+
+    [Fact]
+    public void Parse_Generated_AI_Data()
+    {
+        // We used the above book format with the following prompt:
+        // Can you give me 10 random books using the following format, each record should be a single "add ..." line, not all optional parameters should have a value:
+
+        var context = new TestContext();
+
+        var generatedData = """
+                            add Book 978-3-16-148410-0 "The Catcher in the Rye" "J.D. Salinger" 1951 --Status=Available --OriginCountry=US
+                            add Book 978-0-7432-7356-5 "The Da Vinci Code" "Dan Brown" 2003 --Status=Borrowed --Dimensions="15 cm"
+                            add Book 978-0-670-81302-8 "The Road" "Cormac McCarthy" 2006 --Status=Available --OriginCountry=US
+                            add Book 978-1-5011-8831-9 "Where the Crawdads Sing" "Delia Owens" 2018 --Dimensions="21 cm"
+                            add Book 978-0-06-112008-4 "To Kill a Mockingbird" "Harper Lee" 1960 --Status=Lost --OriginCountry=US
+                            add Book 978-1-4000-3341-6 "Life of Pi" "Yann Martel" 2001 --Status=Available --Dimensions="22 cm" --OriginCountry=CA
+                            add Book 978-0-307-95637-8 "The Book Thief" "Markus Zusak" 2005 --OriginCountry=AU
+                            add Book 978-0-345-39180-3 "1984" "George Orwell" 1949 --Status=Available
+                            add Book 978-0-7432-7355-8 "Angels & Demons" "Dan Brown" 2000 --Status=Borrowed --Dimensions="19 cm" --OriginCountry=US
+                            add Book 978-1-4767-2765-1 "The Nightingale" "Kristin Hannah" 2015 --OriginCountry=US
+                            """;
+
+        // Add used countries from generated data
+        RecordCommandRegistry.RunMany(context, """
+                                               add country US 'United States'
+                                               add country CA Canada
+                                               add country AU Australia
+                                               """);
+
+        // Verify the generated data.
+        RecordCommandRegistry.RunMany(context, generatedData);
+
+        Assert.Equal(10, context.Books.Count);
+        Assert.Equal(3 + 4, context.Books.Count(b => b.Status == BookStatus.Available)); // Available is the default status
+        Assert.Equal(2, context.Books.Count(b => b.Status == BookStatus.Borrowed));
+        Assert.Equal(1, context.Books.Count(b => b.Status == BookStatus.Lost));
+        Assert.Equal(5, context.Books.Count(b => b.OriginCountry?.Code == "US"));
+        Assert.Equal(1, context.Books.Count(b => b.OriginCountry?.Code == "CA"));
+        Assert.Equal(1, context.Books.Count(b => b.OriginCountry?.Code == "AU"));
     }
 
     [Fact]
