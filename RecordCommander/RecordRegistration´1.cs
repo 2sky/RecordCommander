@@ -34,6 +34,11 @@ public abstract class RecordRegistration<TContext>
     // TODO: Should we use read-only versions for this for safety?
     public List<PropertyInfo> PositionalProperties { get; }
 
+    /// <summary>
+    /// Non-positional properties (used to resolve named arguments).
+    /// </summary>
+    public PropertyInfo[] NonPositionalProperties { get; }
+
     protected RecordRegistration(string name, Type recordType, PropertyInfo uniqueKeyProperty, List<PropertyInfo> positionalProperties)
     {
         Name = name;
@@ -42,6 +47,8 @@ public abstract class RecordRegistration<TContext>
         PositionalProperties = positionalProperties;
         AllProperties = new(StringComparer.OrdinalIgnoreCase);
 
+        var nonPositionalProperties = new List<PropertyInfo>();
+
         foreach (var property in recordType.GetProperties(BindingFlags.Public | BindingFlags.Instance).Where(p => p.CanWrite))
         {
             AllProperties[property.Name] = property;
@@ -49,7 +56,12 @@ public abstract class RecordRegistration<TContext>
             var aliasAttributes = property.GetCustomAttributes<AliasAttribute>();
             foreach (var alias in aliasAttributes)
                 AllProperties[alias.Name] = property;
+
+            if (property != uniqueKeyProperty && !positionalProperties.Contains(property))
+                nonPositionalProperties.Add(property);
         }
+
+        NonPositionalProperties = nonPositionalProperties.ToArray();
     }
 
     /// <summary>

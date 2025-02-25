@@ -789,8 +789,7 @@ public class RecordCommanderTests
         Assert.Equal("add country <Code> <Name> <SpokenLanguages>", country);
 
         var book = RecordCommandRegistry<TestContext>.GetUsageExample<Book>();
-        //Assert.Equal("add book <ISBN> <Title> <Author> --year=<PublicationYear>", book);
-        Assert.Equal("add Book <ISBN> <Title> <Author> <PublicationYear>", book);
+        Assert.Equal("add Book <ISBN> <Title> <Author> <PublicationYear> [--Status=<Status> --Flags=<Flags> --Dimensions=<Dimensions> --OriginCountry=<OriginCountry>]", book);
     }
 
     [Fact]
@@ -800,8 +799,7 @@ public class RecordCommanderTests
         Assert.Equal("add ctr <Code> <Name> <langs>", country);
 
         var book = RecordCommandRegistry<TestContext>.GetUsageExample<Book>(preferAliases: true);
-        //Assert.Equal("add bk <ISBN> <Title> <Author> --year=<year>", book);
-        Assert.Equal("add bk <ISBN> <Title> <Author> <year>", book);
+        Assert.Equal("add bk <ISBN> <Title> <Author> <year> [--Status=<Status> --Flags=<Flags> --Dimensions=<Dimensions> --origin-country=<origin-country>]", book);
     }
 
     [Fact]
@@ -815,6 +813,20 @@ public class RecordCommanderTests
                      #   Name : string (quoted if contains spaces)
                      #   SpokenLanguages : array of string (quoted if contains spaces)
                      """, country);
+
+        var book = RecordCommandRegistry<TestContext>.GetDetailedUsageExample<Book>();
+        Assert.Equal("""
+                     add Book <ISBN> <Title> <Author> <PublicationYear> [--Status=<Status> --Flags=<Flags> --Dimensions=<Dimensions> --OriginCountry=<OriginCountry>]
+                     # Parameter descriptions:
+                     #   ISBN : string (quoted if contains spaces)
+                     #   Title : string (quoted if contains spaces)
+                     #   Author : string (quoted if contains spaces)
+                     #   PublicationYear : number
+                     #   Status : enum (Available|Borrowed|Lost)
+                     #   Flags : enum (None|Fiction|NonFiction|Mystery|Thriller|Romance|Fantasy|ScienceFiction)
+                     #   Dimensions : unit
+                     #   OriginCountry : country
+                     """, book);
     }
 
     [Fact]

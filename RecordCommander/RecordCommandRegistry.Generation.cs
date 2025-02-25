@@ -104,15 +104,54 @@ public static partial class RecordCommandRegistry<TContext>
     /// </summary>
     public static string GetUsageExample<TRecord>(bool preferAliases = false)
     {
-        var recordType = typeof(TRecord);
-        var registration = GetRegistration(recordType);
+        GetUsageExample<TRecord>(preferAliases, out _, out var example);
 
-        var cmdName = preferAliases ? Helpers.GetAliasOrDefault(registration.Name, recordType) : registration.Name;
-        var uniqueKeyPlaceholder = $"<{registration.UniqueKeyProperty.Name}>";
-        var positionalPlaceholders = registration.PositionalProperties
-            .Select(prop => $"<{(preferAliases ? (Helpers.GetAlias(prop) ?? prop.Name) : prop.Name)}>");
-        // TODO: Handle named arguments
-        return $"add {cmdName} {uniqueKeyPlaceholder} {string.Join(" ", positionalPlaceholders)}".Trim();
+        return example.ToString();
+    }
+
+    private static void GetUsageExample<TRecord>(bool preferAliases, out RecordRegistration<TContext> registration, out StringBuilder example)
+    {
+        var recordType = typeof(TRecord);
+        registration = GetRegistration(recordType);
+
+        example = new StringBuilder("add ");
+        example.Append(preferAliases ? Helpers.GetAliasOrDefault(registration.Name, recordType) : registration.Name);
+        example.Append(" <");
+        example.Append(registration.UniqueKeyProperty.Name);
+        example.Append('>');
+
+        if (registration.PositionalProperties.Count > 0)
+        {
+            foreach (var positionalProperty in registration.PositionalProperties)
+            {
+                example.Append(" <");
+                example.Append(preferAliases ? (Helpers.GetAlias(positionalProperty) ?? positionalProperty.Name) : positionalProperty.Name);
+                example.Append('>');
+            }
+        }
+
+        if (registration.NonPositionalProperties.Length > 0)
+        {
+            example.Append(" [");
+
+            var first = true;
+            foreach (var prop in registration.NonPositionalProperties)
+            {
+                if (first)
+                    first = false;
+                else
+                    example.Append(' ');
+
+                example.Append("--");
+                var name = preferAliases ? (Helpers.GetAlias(prop) ?? prop.Name) : prop.Name;
+                example.Append(name);
+                example.Append("=<");
+                example.Append(name);
+                example.Append('>');
+            }
+
+            example.Append(']');
+        }
     }
 
     /// <summary>
@@ -120,17 +159,15 @@ public static partial class RecordCommandRegistry<TContext>
     /// </summary>
     public static string GetDetailedUsageExample<TRecord>(bool preferAliases = false)
     {
-        var registration = GetRegistration(typeof(TRecord));
+        GetUsageExample<TRecord>(preferAliases, out var registration, out var sb);
 
-        // Generate the basic usage example:
-        var usage = GetUsageExample<TRecord>(preferAliases);
-        var sb = new StringBuilder();
-        sb.AppendLine(usage);
+        // Add type descriptions as comments.
+        sb.AppendLine();
         sb.AppendLine("# Parameter descriptions:");
 
         // Describe the unique key.
-        var uniqueKeyName = registration.UniqueKeyProperty.Name;
-        sb.AppendLine($"#   {uniqueKeyName} : {Helpers.GetTypeDescription(registration.UniqueKeyProperty.PropertyType)}");
+        var uniqueKey = registration.UniqueKeyProperty;
+        sb.AppendLine($"#   {uniqueKey.Name} : {Helpers.GetTypeDescription(uniqueKey.PropertyType)}");
 
         // Describe each positional property.
         foreach (var prop in registration.PositionalProperties)
@@ -139,8 +176,16 @@ public static partial class RecordCommandRegistry<TContext>
             sb.AppendLine($"#   {displayName} : {Helpers.GetTypeDescription(prop.PropertyType)}");
         }
 
-        // (Optional) If you support named parameters or method mappings, include them here.
-        return sb.ToString().Trim();
+        // Describe each non-positional property.
+        foreach (var prop in registration.NonPositionalProperties)
+        {
+            var displayName = preferAliases ? (Helpers.GetAlias(prop) ?? prop.Name) : prop.Name;
+            sb.AppendLine($"#   {displayName} : {Helpers.GetTypeDescription(prop.PropertyType)}");
+        }
+
+        // (Optional) If you support method mappings, include them here.
+
+        return sb.ToString().TrimEnd();
     }
 
     public static string GetCustomCommandPrompt(string commandName, bool describeParameters = false)
