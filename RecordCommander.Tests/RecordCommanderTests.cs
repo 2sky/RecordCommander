@@ -2,6 +2,7 @@
 // ReSharper disable StringLiteralTypo
 // ReSharper disable UnusedMember.Global
 
+using System.ComponentModel;
 using System.Diagnostics;
 
 namespace RecordCommander.Tests;
@@ -68,6 +69,7 @@ public class Language
 [DebuggerDisplay("{Code,nq} - {Name,nq}")]
 public class Country
 {
+    [Description("The ISO 3166-1 alpha-2 code for the country.")]
     public string Code { get; set; } = null!;
     public string Name { get; set; } = null!;
 
@@ -179,7 +181,7 @@ public class RecordCommanderTests
         RecordCommandRegistry<TestContext>.RegisterCommand("log2", (TestContext context, string log, bool b = true, int x = 5) => context.Logs.Add($"{log};b={b};x={x}"));
         RecordCommandRegistry<TestContext>.RegisterCommand("log3", (TestContext context, string log, int? x) => context.Logs.Add($"{log};x={x}"));
         // Extra command to test some various types of parameters
-        RecordCommandRegistry<TestContext>.RegisterCommand("log4", (TestContext context, string log, DateTime x, DateOnly y, decimal z, TimeSpan ts, Guid g) => context.Logs.Add(FormattableString.Invariant($"{log};x={x};y={y};z={z},ts={ts};g={g}")));
+        RecordCommandRegistry<TestContext>.RegisterCommand("log4", (TestContext context, [Description("Message to log")] string log, DateTime x, DateOnly y, decimal z, TimeSpan ts, Guid g) => context.Logs.Add(FormattableString.Invariant($"{log};x={x};y={y};z={z},ts={ts};g={g}")));
         RecordCommandRegistry<TestContext>.RegisterCommand("add-language-to-country", (TestContext context, string countryCode, string langKey) =>
         {
             var country = context.Countries.FirstOrDefault(c => c.Code == countryCode);
@@ -195,7 +197,7 @@ public class RecordCommanderTests
         });
 
         // With optional parameters
-        RecordCommandRegistry<TestContext>.RegisterCommand("update-language", (TestContext context, string key, string name, string? label = null) =>
+        RecordCommandRegistry<TestContext>.RegisterCommand("update-language", (TestContext context, string key, string name, [Description("Optional label")] string? label = null) =>
         {
             var lang = context.Languages.FirstOrDefault(l => l.Key == key);
             if (lang is null)
@@ -208,7 +210,7 @@ public class RecordCommanderTests
         });
 
         // Custom conversion
-        RecordCommandRegistry<TestContext>.RegisterCustomConverter((_, s) => Unit.Parse(s), "string (e.g. \"20 kg\")");
+        RecordCommandRegistry<TestContext>.RegisterCustomConverter((_, [Description("Unit value")] s) => Unit.Parse(s), "string (e.g. \"20 kg\")");
         RecordCommandRegistry<TestContext>.RegisterCustomConverter((ctx, code) => ctx.Countries.Find(c => c.Code == code), "string <two-letter-country-code>");
     }
 
@@ -829,7 +831,7 @@ public class RecordCommanderTests
         Assert.Equal("""
                      add country <Code> <Name> <SpokenLanguages>
                      # Parameter descriptions:
-                     #   Code : string (quoted if contains spaces)
+                     #   Code : string (quoted if contains spaces) - The ISO 3166-1 alpha-2 code for the country.
                      #   Name : string (quoted if contains spaces)
                      #   SpokenLanguages : array of string (quoted if contains spaces)
                      """, country);
@@ -856,7 +858,7 @@ public class RecordCommanderTests
         Assert.Equal("""
                      add country <Code> <Name>
                      # Parameter descriptions:
-                     #   Code : string (quoted if contains spaces)
+                     #   Code : string (quoted if contains spaces) - The ISO 3166-1 alpha-2 code for the country.
                      #   Name : string (quoted if contains spaces)
                      """, country);
 
@@ -934,7 +936,7 @@ public class RecordCommanderTests
         var log4 = RecordCommandRegistry<TestContext>.GetCustomCommandPrompt("log4", true);
         Assert.Equal("""
                      log4 <log> <x> <y> <z> <ts> <g>
-                     #   log : string (quoted if contains spaces)
+                     #   log : string (quoted if contains spaces) - Message to log
                      #   x : date (format yyyy-MM-dd)
                      #   y : date (format yyyy-MM-dd)
                      #   z : number

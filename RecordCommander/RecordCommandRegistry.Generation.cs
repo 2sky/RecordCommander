@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.ComponentModel;
+using System.Reflection;
 using System.Text;
 
 namespace RecordCommander;
@@ -171,29 +172,41 @@ public static partial class RecordCommandRegistry<TContext>
         sb.AppendLine();
         sb.AppendLine("# Parameter descriptions:");
 
+        void DescribeProperty(PropertyInfo property, string displayName)
+        {
+            sb.Append($"#   {displayName} : {Helpers.GetTypeDescription(property.PropertyType, _customConverterTypeDescriptions)}");
+
+            var description = property.GetCustomAttribute<DescriptionAttribute>()?.Description;
+            if (!string.IsNullOrWhiteSpace(description))
+            {
+                sb.Append(" - ");
+                sb.Append(description);
+            }
+
+            sb.AppendLine();
+        }
+
         // Describe the unique key.
         var uniqueKey = registration.UniqueKeyProperty;
-        sb.AppendLine($"#   {uniqueKey.Name} : {Helpers.GetTypeDescription(uniqueKey.PropertyType, _customConverterTypeDescriptions)}");
+        DescribeProperty(uniqueKey, uniqueKey.Name);
+
+        void DescribeProperties(IEnumerable<PropertyInfo> properties)
+        {
+            foreach (var prop in properties)
+            {
+                if (filterProperty != null && !filterProperty(prop))
+                    continue;
+
+                var displayName = preferAliases ? (Helpers.GetAlias(prop) ?? prop.Name) : prop.Name;
+                DescribeProperty(prop, displayName);
+            }
+        }
 
         // Describe each positional property.
-        foreach (var prop in registration.PositionalProperties)
-        {
-            if (filterProperty != null && !filterProperty(prop))
-                continue;
-
-            var displayName = preferAliases ? (Helpers.GetAlias(prop) ?? prop.Name) : prop.Name;
-            sb.AppendLine($"#   {displayName} : {Helpers.GetTypeDescription(prop.PropertyType, _customConverterTypeDescriptions)}");
-        }
+        DescribeProperties(registration.PositionalProperties);
 
         // Describe each non-positional property.
-        foreach (var prop in registration.NonPositionalProperties)
-        {
-            if (filterProperty != null && !filterProperty(prop))
-                continue;
-
-            var displayName = preferAliases ? (Helpers.GetAlias(prop) ?? prop.Name) : prop.Name;
-            sb.AppendLine($"#   {displayName} : {Helpers.GetTypeDescription(prop.PropertyType, _customConverterTypeDescriptions)}");
-        }
+        DescribeProperties(registration.NonPositionalProperties);
 
         // (Optional) If you support method mappings, include them here.
 
@@ -237,7 +250,19 @@ public static partial class RecordCommandRegistry<TContext>
 
             // Describe the parameters by type
             foreach (var param in parameters)
-                builder.AppendLine($"#   {param.Name} : {Helpers.GetTypeDescription(param.ParameterType, _customConverterTypeDescriptions)}");
+            {
+                builder.Append($"#   {param.Name} : {Helpers.GetTypeDescription(param.ParameterType, _customConverterTypeDescriptions)}");
+
+                // Check if we have a DescriptionAttribute
+                var description = param.GetCustomAttribute<DescriptionAttribute>()?.Description;
+                if (!string.IsNullOrWhiteSpace(description))
+                {
+                    builder.Append(" - ");
+                    builder.Append(description);
+                }
+
+                builder.AppendLine();
+            }
         }
 
         return builder.ToString();
