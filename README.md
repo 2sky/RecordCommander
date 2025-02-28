@@ -1,7 +1,9 @@
 # RecordCommander
 
-![RecordCommander Logo](logo-128x128.png)
+![RecordCommander Logo](https://raw.githubusercontent.com/2sky/RecordCommander/main/logo-128x128.png)
 ![NuGet Version](https://img.shields.io/nuget/v/RecordCommander)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/2sky/RecordCommander/blob/main/LICENSE)
+![NuGet Downloads](https://img.shields.io/nuget/dt/RecordCommander)
 
 RecordCommander is a C# library that enables you to create, update, and manage records using a command-line–inspired interface. With a focus on simplicity and flexibility, RecordCommander allows you to register your data types, define unique keys and property mappings, and use both positional and named arguments to seed data or integrate with import/export systems.
 
