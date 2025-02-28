@@ -408,14 +408,25 @@ public static partial class RecordCommandRegistry<TContext>
                     var methodName = key.Substring(0, colonIndex);
                     var args = key.Substring(colonIndex + 1);
 #endif
-                    var method = registration.RecordType.GetMethod(methodName) ?? registration.RecordType.GetMethod("Set" + methodName);
-                    if (method is null)
+                    var potentialMethods = registration.RecordType.GetMethods()
+                        .Where(m => string.Equals(m.Name, methodName, StringComparison.OrdinalIgnoreCase) ||
+                                    string.Equals(m.Name, "Set" + methodName, StringComparison.OrdinalIgnoreCase))
+                        .ToArray();
+                    if (potentialMethods.Length is 0)
                         throw new ArgumentException($"Method '{methodName}' does not exist on type '{registration.RecordType.Name}'");
 
-                    var parameters = method.GetParameters();
-                    if (parameters.Length != 2)
-                        throw new ArgumentException($"Method '{methodName}' must have exactly 2 parameters, got {parameters.Length} instead");
+                    var matchingMethods = potentialMethods.Where(m => m.GetParameters().Length == 2).ToArray();
+                    if (matchingMethods.Length is 0)
+                    {
+                        // Methods exist but none have exactly 2 parameters.
+                        var invalidMethod = potentialMethods.First();
+                        throw new ArgumentException($"Method '{invalidMethod.Name}' must have exactly 2 parameters, got {invalidMethod.GetParameters().Length} instead");
+                    }
 
+                    // Prefer a method whose name exactly matches methodName over "Set" + methodName.
+                    var method = matchingMethods.FirstOrDefault(m => string.Equals(m.Name, methodName, StringComparison.OrdinalIgnoreCase))
+                                    ?? matchingMethods.First();
+                    var parameters = method.GetParameters();
                     method.Invoke(record, [ConvertToType(context, args, parameters[0].ParameterType), ConvertToType(context, value, parameters[1].ParameterType)]);
                     continue;
                 }

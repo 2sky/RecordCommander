@@ -39,6 +39,12 @@ public record Unit(decimal value, string symbol)
     public override string ToString() => $"{value} {symbol}";
 }
 
+public static class Languages
+{
+    public const string English = "en";
+    public const string Dutch = "nl";
+}
+
 [Alias("lang")]
 public class Language
 {
@@ -48,6 +54,12 @@ public class Language
     public string Name { get; set; } = null!;
 
     public void SetLabel(string culture, string label) => labels[culture] = label;
+
+    public void SetLabel(string label)
+    {
+        SetLabel(Languages.English, label);
+        SetLabel(Languages.Dutch, label);
+    }
 
     public string? GetLabel(string culture) => labels.GetValueOrDefault(culture);
 }
