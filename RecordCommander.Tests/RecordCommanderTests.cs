@@ -820,7 +820,7 @@ public class RecordCommanderTests
         var country = RecordCommandRegistry<TestContext>.GetUsageExample<Country>(preferAliases: true);
         Assert.Equal("add ctr <Code> <Name> <langs>", country);
 
-        var book = RecordCommandRegistry<TestContext>.GetUsageExample<Book>(preferAliases: true);
+        var book = RecordCommandRegistry<TestContext>.GetUsageExample(typeof(Book), preferAliases: true);
         Assert.Equal("add bk <ISBN> <Title> <Author> <year> [--Status=<Status> --Flags=<Flags> --Dimensions=<Dimensions> --origin-country=<origin-country>]", book);
     }
 
@@ -836,7 +836,7 @@ public class RecordCommanderTests
                      #   SpokenLanguages : array of string (quoted if contains spaces)
                      """, country);
 
-        var book = RecordCommandRegistry<TestContext>.GetDetailedUsageExample<Book>();
+        var book = RecordCommandRegistry<TestContext>.GetDetailedUsageExample(typeof(Book));
         Assert.Equal("""
                      add Book <ISBN> <Title> <Author> <PublicationYear> [--Status=<Status> --Flags=<Flags> --Dimensions=<Dimensions> --OriginCountry=<OriginCountry>]
                      # Parameter descriptions:

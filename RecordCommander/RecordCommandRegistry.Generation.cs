@@ -105,14 +105,24 @@ public static partial class RecordCommandRegistry<TContext>
     /// </summary>
     public static string GetUsageExample<TRecord>(bool preferAliases = false, Func<PropertyInfo, bool>? filterProperty = null)
     {
-        GetUsageExample<TRecord>(preferAliases, filterProperty, out _, out var example);
+        GetUsageExample(typeof(TRecord), preferAliases, filterProperty, out _, out var example);
 
         return example.ToString();
     }
 
-    private static void GetUsageExample<TRecord>(bool preferAliases, Func<PropertyInfo, bool>? filterProperty, out RecordRegistration<TContext> registration, out StringBuilder example)
+    /// <summary>
+    /// Generates a basic usage example (one line) based on registration.
+    /// For example: add country &lt;code&gt; &lt;name&gt;
+    /// </summary>
+    public static string GetUsageExample(Type recordType, bool preferAliases = false, Func<PropertyInfo, bool>? filterProperty = null)
     {
-        var recordType = typeof(TRecord);
+        GetUsageExample(recordType, preferAliases, filterProperty, out _, out var example);
+
+        return example.ToString();
+    }
+
+    private static void GetUsageExample(Type recordType, bool preferAliases, Func<PropertyInfo, bool>? filterProperty, out RecordRegistration<TContext> registration, out StringBuilder example)
+    {
         registration = GetRegistration(recordType);
 
         example = new StringBuilder("add ");
@@ -166,7 +176,15 @@ public static partial class RecordCommandRegistry<TContext>
     /// </summary>
     public static string GetDetailedUsageExample<TRecord>(bool preferAliases = false, Func<PropertyInfo, bool>? filterProperty = null)
     {
-        GetUsageExample<TRecord>(preferAliases, filterProperty, out var registration, out var sb);
+        return GetDetailedUsageExample(typeof(TRecord), preferAliases, filterProperty);
+    }
+
+    /// <summary>
+    /// Generates a detailed usage example including type descriptions as comments.
+    /// </summary>
+    public static string GetDetailedUsageExample(Type recordType, bool preferAliases = false, Func<PropertyInfo, bool>? filterProperty = null)
+    {
+        GetUsageExample(recordType, preferAliases, filterProperty, out var registration, out var sb);
 
         // Add type descriptions as comments.
         sb.AppendLine();
