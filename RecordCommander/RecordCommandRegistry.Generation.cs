@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.Concurrent;
+using System.ComponentModel;
 using System.Reflection;
 using System.Text;
 
@@ -40,7 +41,7 @@ public static partial class RecordCommandRegistry<TContext>
         builder.Append(Helpers.ConvertValueToString(uniqueKeyValue, uniqueKeyValue.GetType()));
 
         // Prepare additional properties (all properties except the unique key)
-        // that have non-default values.
+        // that have non-default values if ignore is enabled.
         var additionalProps = new HashSet<(PropertyInfo Prop, string Name, object? Value)>();
         foreach (var kvp in registration.AllProperties)
         {
@@ -50,7 +51,10 @@ public static partial class RecordCommandRegistry<TContext>
                 continue;
 
             var value = prop.GetValue(record);
-            if (Helpers.IsDefaultValue(value, prop))
+            if (value is null)
+                continue;
+
+            if (options.IgnoreDefaultValues && Helpers.IsDefaultValue(value, prop))
                 continue;
 
             // Use alias if requested.
@@ -289,20 +293,24 @@ public static partial class RecordCommandRegistry<TContext>
 
 file static class Helpers
 {
+    private static readonly ConcurrentDictionary<Type, object> _defaultValues = [];
+
     /// <summary>
     /// Returns true if the value is considered "default" for the given type.
-    /// For reference types, that is null.
+    /// For reference types, that is null, but that is already handled by the caller.
     /// For value types, that is equal to default(T).
+    /// If a [DefaultValue] attribute is applied on the property we check that instead.
     /// </summary>
-    public static bool IsDefaultValue(object? value, PropertyInfo property)
+    public static bool IsDefaultValue(object value, PropertyInfo property)
     {
-        if (value == null)
-            return true;
+        var defaultValueAttr = property.GetCustomAttribute<DefaultValueAttribute>();
+        if (defaultValueAttr != null)
+            return Equals(value, defaultValueAttr.Value);
 
         var type = property.PropertyType;
         if (type.IsValueType)
         {
-            var defaultValue = Activator.CreateInstance(Nullable.GetUnderlyingType(type) ?? type);
+            var defaultValue = _defaultValues.GetOrAdd(type, t => Activator.CreateInstance(Nullable.GetUnderlyingType(t) ?? t)!);
             return value.Equals(defaultValue);
         }
 

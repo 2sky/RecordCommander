@@ -10,10 +10,12 @@ public sealed class CommandGenerationOptions
     /// </summary>
     /// <param name="preferAliases">If true, use any defined aliases for the command and property names.</param>
     /// <param name="usePositionalProperties">If true, output property values as positional parameters.</param>
-    public CommandGenerationOptions(bool preferAliases = false, bool usePositionalProperties = true)
+    /// <param name="ignoreDefaultValues">If true, ignore properties with default values.</param>
+    public CommandGenerationOptions(bool preferAliases = false, bool usePositionalProperties = true, bool ignoreDefaultValues = true)
     {
         PreferAliases = preferAliases;
         UsePositionalProperties = usePositionalProperties;
+        IgnoreDefaultValues = ignoreDefaultValues;
     }
 
     /// <summary>
@@ -32,4 +34,9 @@ public sealed class CommandGenerationOptions
     /// Otherwise, use named arguments.
     /// </summary>
     public bool UsePositionalProperties { get; }
+
+    /// <summary>
+    /// If true, ignore properties with default values.
+    /// </summary>
+    public bool IgnoreDefaultValues { get; }
 }

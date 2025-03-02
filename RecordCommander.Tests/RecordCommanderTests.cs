@@ -27,6 +27,8 @@ public class TestContext
     }
 
     public List<string> Logs { get; } = [];
+
+    public List<SampleRecord> Samples { get; } = [];
 }
 
 public record Unit(decimal value, string symbol)
@@ -130,6 +132,24 @@ public enum BookFlags
     ScienceFiction = 64,
 }
 
+// Sample record for testing.
+public class SampleRecord
+{
+    public string Id { get; set; } = null!;
+
+    public string Name { get; set; } = null!;
+
+    [DefaultValue(-1)]
+    public int Age { get; set; } = -1;
+
+    [DefaultValue(true)]
+    public bool IsActive { get; set; } = true;
+
+    public DateTime? DateOfBirth { get; set; }
+
+    public bool IsAdult { get; set; }
+}
+
 public class RecordCommanderTests
 {
     // Static constructor to perform registrations only once.
@@ -176,6 +196,8 @@ public class RecordCommanderTests
             );
         }
         catch { /* Ignore if already registered */ }
+
+        RecordCommandRegistry<TestContext>.Register(ctx => ctx.Samples, it => it.Id);
 
         RecordCommandRegistry<TestContext>.RegisterCommand("log", (TestContext context, string log) => context.Logs.Add(log));
         RecordCommandRegistry<TestContext>.RegisterCommand("log2", (TestContext context, string log, bool b = true, int x = 5) => context.Logs.Add($"{log};b={b};x={x}"));
@@ -953,5 +975,45 @@ public class RecordCommanderTests
             RecordCommandRegistry<TestContext>.RegisterCommand("add", (TestContext context, string log) => context.Logs.Add(log))
         );
         Assert.Contains("is reserved", ex.Message);
+    }
+
+    [Fact]
+    public void GenerateCommand_IgnoresDefaultValues_WhenOptionIsTrue()
+    {
+        // Arrange: Age remains at default (-1) and IsActive is true.
+        var record = new SampleRecord { Id = "123", Name = "Alice" };
+        var options = new CommandGenerationOptions(preferAliases: false, usePositionalProperties: true, ignoreDefaultValues: true);
+
+        // Act
+        var command = RecordCommandRegistry<TestContext>.GenerateCommand(record, options);
+
+        // Assert: command should not include Age property because it's default.
+        Assert.DoesNotContain("--Age=-1", command);
+        Assert.DoesNotContain("--IsActive=True", command);
+        Assert.Contains("Alice", command);
+        Assert.Contains("123", command);
+
+        // Null is always skipped so we should not see it.
+        Assert.DoesNotContain("--DateOfBirth=", command);
+    }
+
+    [Fact]
+    public void GenerateCommand_IncludesDefaultValues_WhenOptionIsFalse()
+    {
+        // Arrange: Age remains at default (-1) and IsActive is true.
+        var record = new SampleRecord { Id = "123", Name = "Alice" };
+        var options = new CommandGenerationOptions(preferAliases: false, usePositionalProperties: true, ignoreDefaultValues: false);
+
+        // Act
+        var command = RecordCommandRegistry<TestContext>.GenerateCommand(record, options);
+
+        // Assert: command should include Age property even though its value is default.
+        Assert.Contains("--Age=-1", command);
+        Assert.Contains("--IsActive=True", command);
+        Assert.Contains("Alice", command);
+        Assert.Contains("123", command);
+
+        // Null is always skipped so we should not see it.
+        Assert.DoesNotContain("--DateOfBirth=", command);
     }
 }
