@@ -233,7 +233,6 @@ public class RecordCommanderTests
 
         // Custom conversion
         RecordCommandRegistry<TestContext>.RegisterCustomConverter((_, [Description("Unit value")] s) => Unit.Parse(s), "string (e.g. \"20 kg\")");
-        RecordCommandRegistry<TestContext>.RegisterCustomConverter((ctx, code) => ctx.Countries.Find(c => c.Code == code), "string <two-letter-country-code>");
     }
 
     [Fact]
@@ -597,6 +596,14 @@ public class RecordCommanderTests
     }
 
     [Fact]
+    public void Generation_UsingRelatedRecord()
+    {
+        var book = new Book { ISBN = "978-3-16-148410-0", OriginCountry = new Country { Code = "be" }};
+        var cmd = RecordCommandRegistry<TestContext>.GenerateCommand(book);
+        Assert.Equal("add Book 978-3-16-148410-0 --OriginCountry=be", cmd);
+    }
+
+    [Fact]
     public void Generation_Books_Roundtrip()
     {
         var context = new TestContext();
@@ -779,6 +786,8 @@ public class RecordCommanderTests
     [Fact]
     public void CustomConversion_Country()
     {
+        // NOTE: Registered record types should just work as-is since we already have their logic to look them up
+
         var context = new TestContext();
         // Add a country record.
         RecordCommandRegistry.Run(context, "add country be Belgium");
@@ -792,7 +801,6 @@ public class RecordCommanderTests
     [Fact]
     public void HasChecks()
     {
-        Assert.True(RecordCommandRegistry<TestContext>.HasCustomConverter(typeof(Country)));
         Assert.True(RecordCommandRegistry<TestContext>.HasCustomConverter(typeof(Unit)));
 
         Assert.True(RecordCommandRegistry<TestContext>.IsRegistered(nameof(Country)));
@@ -823,7 +831,6 @@ public class RecordCommanderTests
 
         var customConverters = RecordCommandRegistry<TestContext>.CustomConverters;
         Assert.Contains(typeof(Unit), customConverters);
-        Assert.Contains(typeof(Country), customConverters);
     }
 
     [Fact]
@@ -869,7 +876,7 @@ public class RecordCommanderTests
                      #   Status : enum (Available|Borrowed|Lost)
                      #   Flags : enum (None|Fiction|NonFiction|Mystery|Thriller|Romance|Fantasy|ScienceFiction)
                      #   Dimensions : string (e.g. "20 kg")
-                     #   OriginCountry : string <two-letter-country-code>
+                     #   OriginCountry : string <country-code>
                      """, book);
     }
 
@@ -894,7 +901,7 @@ public class RecordCommanderTests
                      #   PublicationYear : number
                      #   Status : enum (Available|Borrowed|Lost)
                      #   Dimensions : string (e.g. "20 kg")
-                     #   OriginCountry : string <two-letter-country-code>
+                     #   OriginCountry : string <country-code>
                      """, book);
     }
 

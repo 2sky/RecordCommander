@@ -262,6 +262,10 @@ public static partial class RecordCommandRegistry<TContext>
         foreach (var alias in aliasAttributes)
             _registrations[alias.Name] = registration;
 
+        // We add a custom description so that we know that we can look these up by their unique key.
+        // TODO: We should be able to customize these descriptions.
+        _customConverterTypeDescriptions[typeof(TRecord)] = "string <" + registration.Name.ToLowerInvariant() + "-" + registration.UniqueKeyProperty.Name.ToLowerInvariant() + ">";
+
         return registration;
     }
 
@@ -604,6 +608,11 @@ public static partial class RecordCommandRegistry<TContext>
 
             throw new ArgumentException($"Failed to parse GUID value '{value}' for type {targetType.Name}");
         }
+
+        // Check if targetType is one of our registered record types.
+        var recordRegistration = _registrations.Values.FirstOrDefault(r => r.RecordType == targetType);
+        if (recordRegistration is not null)
+            return recordRegistration.FindRecord(context, value);
 
         // Handle primitives (int, bool, etc.) using ChangeType
         try

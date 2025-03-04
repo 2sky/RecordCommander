@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Reflection;
 using System.Text;
@@ -54,6 +54,14 @@ public static partial class RecordCommandRegistry<TContext>
             if (value is null)
                 continue;
 
+            // Convert known record type to their unique key.
+            if (value is not string)
+            {
+                var uniqueKey = TryGetRegistration(value.GetType())?.UniqueKeyProperty.GetValue(value);
+                if (uniqueKey is not null)
+                    value = uniqueKey;
+            }
+
             if (options.IgnoreDefaultValues && Helpers.IsDefaultValue(value, prop))
                 continue;
 
@@ -97,10 +105,15 @@ public static partial class RecordCommandRegistry<TContext>
 
     private static RecordRegistration<TContext> GetRegistration(Type recordType)
     {
+        return TryGetRegistration(recordType)
+               ?? throw new InvalidOperationException($"No registration found for type {recordType}.");
+    }
+
+    private static RecordRegistration<TContext>? TryGetRegistration(Type recordType)
+    {
         return _registrations.Values.FirstOrDefault(r => r.RecordType == recordType)
                // Fallback to the first that is assignable from the entity type.
-               ?? _registrations.Values.FirstOrDefault(r => r.RecordType.IsAssignableFrom(recordType))
-               ?? throw new InvalidOperationException($"No registration found for type {recordType}.");
+               ?? _registrations.Values.FirstOrDefault(r => r.RecordType.IsAssignableFrom(recordType));
     }
 
     /// <summary>

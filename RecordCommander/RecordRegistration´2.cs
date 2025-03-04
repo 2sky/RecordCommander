@@ -76,4 +76,17 @@ public class RecordRegistration<TContext, TRecord> : RecordRegistration<TContext
 
         return _findRecord(context, uniqueKey) ?? _createRecord(context, uniqueKey)!;
     }
+
+    /// <inheritdoc />
+    public override object? FindRecord(TContext context, string uniqueKey)
+    {
+#if NET8_0_OR_GREATER
+        ArgumentNullException.ThrowIfNull(context);
+#else
+        if (context is null)
+            throw new ArgumentNullException(nameof(context));
+#endif
+
+        return _findRecord(context, uniqueKey);
+    }
 }

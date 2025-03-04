@@ -71,6 +71,11 @@ public abstract class RecordRegistration<TContext>
     public abstract object FindOrCreateRecord(TContext context, string uniqueKey);
 
     /// <summary>
+    /// Find a record in the given context.
+    /// </summary>
+    public abstract object? FindRecord(TContext context, string uniqueKey);
+
+    /// <summary>
     /// Add an alias for this record, e.g. "lng" for "language".
     /// </summary>
     public RecordRegistration<TContext> AddAlias(string alias) => RecordCommandRegistry<TContext>.AddAlias(Name, alias);
