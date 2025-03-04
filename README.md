@@ -21,6 +21,11 @@ RecordCommander is a C# library that enables you to create, update, and manage r
 
 Simply clone the repository and include the source code in your project. Since RecordCommander relies solely on standard .NET libraries, no additional NuGet packages are required.
 
+Or install the library via NuGet Package Manager Console:
+```
+Install-Package RecordCommander
+```
+
 ### Configuration
 
 Before running commands, register your record types with the library. For example, suppose you have the following domain classes:
