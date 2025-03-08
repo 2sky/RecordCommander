@@ -133,6 +133,7 @@ public enum BookFlags
 }
 
 // Sample record for testing.
+[Alias("sr")]
 public class SampleRecord
 {
     public string Id { get; set; } = null!;
@@ -197,7 +198,7 @@ public class RecordCommanderTests
         }
         catch { /* Ignore if already registered */ }
 
-        RecordCommandRegistry<TestContext>.Register(ctx => ctx.Samples, it => it.Id);
+        RecordCommandRegistry<TestContext>.Register(ctx => ctx.Samples, it => it.Id, it => it.Name);
 
         RecordCommandRegistry<TestContext>.RegisterCommand("log", (TestContext context, string log) => context.Logs.Add(log));
         RecordCommandRegistry<TestContext>.RegisterCommand("log2", (TestContext context, string log, bool b = true, int x = 5) => context.Logs.Add($"{log};b={b};x={x}"));
@@ -1022,5 +1023,74 @@ public class RecordCommanderTests
 
         // Null is always skipped so we should not see it.
         Assert.DoesNotContain("--DateOfBirth=", command);
+    }
+
+    [Fact]
+    public void ComplexObjectHierarchy_ShouldHandleNestedObjects()
+    {
+        var context = new TestContext();
+        // Add a country first
+        RecordCommandRegistry.Run(context, "add country de Germany");
+
+        // Add a book with the country as an origin
+        RecordCommandRegistry.Run(context, "add book 978-3-16-148410-0 \"German Book\" \"German Author\" --OriginCountry=de");
+
+        // Verify the book references the correct country object
+        var book = context.Books.First();
+        Assert.NotNull(book.OriginCountry);
+        Assert.Equal("de", book.OriginCountry.Code);
+        Assert.Equal("Germany", book.OriginCountry.Name);
+    }
+
+    [Fact]
+    public void ParseWithDifferentCultures_ShouldHandleCultureCorrectly()
+    {
+        var context = new TestContext();
+        // Test date parsing (the code uses invariant culture)
+        RecordCommandRegistry.Run(context, "log4 \"Culture test\" 2023-01-31 2023-01-31 1234.56 12:34:56 12345678-1234-1234-1234-1234567890AB");
+
+        // Verify parsing worked as expected regardless of current thread culture
+        Assert.Equal("Culture test;x=01/31/2023 00:00:00;y=01/31/2023;z=1234.56,ts=12:34:56;g=12345678-1234-1234-1234-1234567890ab", context.Logs.First());
+    }
+
+    [Fact]
+    public void CommandGenerationOptions_CombinationsOfOptions()
+    {
+        var record = new SampleRecord { Id = "123", Name = "Test", Age = 10 };
+
+        // Test all combinations of options
+        var cmd1 = RecordCommandRegistry<TestContext>.GenerateCommand(record,
+            new(preferAliases: true, usePositionalProperties: true, ignoreDefaultValues: true));
+
+        var cmd2 = RecordCommandRegistry<TestContext>.GenerateCommand(record,
+            new(preferAliases: true, usePositionalProperties: false, ignoreDefaultValues: true));
+
+        var cmd3 = RecordCommandRegistry<TestContext>.GenerateCommand(record,
+            new(preferAliases: true, usePositionalProperties: true, ignoreDefaultValues: false));
+
+        var cmd4 = RecordCommandRegistry<TestContext>.GenerateCommand(record,
+            new(preferAliases: true, usePositionalProperties: false, ignoreDefaultValues: false));
+
+        var cmd5 = RecordCommandRegistry<TestContext>.GenerateCommand(record,
+            new(preferAliases: false, usePositionalProperties: true, ignoreDefaultValues: true));
+
+        var cmd6 = RecordCommandRegistry<TestContext>.GenerateCommand(record,
+            new(preferAliases: false, usePositionalProperties: false, ignoreDefaultValues: true));
+
+        var cmd7 = RecordCommandRegistry<TestContext>.GenerateCommand(record,
+            new(preferAliases: false, usePositionalProperties: true, ignoreDefaultValues: false));
+
+        var cmd8 = RecordCommandRegistry<TestContext>.GenerateCommand(record,
+            new(preferAliases: false, usePositionalProperties: false, ignoreDefaultValues: false));
+
+        // Verify each combination produces expected output
+        Assert.Equal("add sr 123 Test --Age=10", cmd1);
+        Assert.Equal("add sr 123 --Name=Test --Age=10", cmd2);
+        Assert.Equal("add sr 123 Test --Age=10 --IsActive=True --IsAdult=False", cmd3);
+        Assert.Equal("add sr 123 --Name=Test --Age=10 --IsActive=True --IsAdult=False", cmd4);
+        Assert.Equal("add SampleRecord 123 Test --Age=10", cmd5);
+        Assert.Equal("add SampleRecord 123 --Name=Test --Age=10", cmd6);
+        Assert.Equal("add SampleRecord 123 Test --Age=10 --IsActive=True --IsAdult=False", cmd7);
+        Assert.Equal("add SampleRecord 123 --Name=Test --Age=10 --IsActive=True --IsAdult=False", cmd8);
     }
 }
