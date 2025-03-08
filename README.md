@@ -212,6 +212,88 @@ var cmd = RecordCommandRegistry<TestContext>.GenerateCommand(lang);
 Assert.Equal("add language en \"English Language\"", cmd);
 ```
 
+### Method Mapping
+
+You can call methods on your objects using the `--Property:Argument=Value` syntax. For example:
+
+```csharp
+// Assuming Language has a method SetLabel(string culture, string label)
+RecordCommandRegistry.Run(context, "add language en English --SetLabel:de=Englisch");
+```
+
+This will find or create a language with key "en", set its Name to "English", and then call the SetLabel method with arguments "de" and "Englisch".
+
+### Command Generation Options
+
+When generating commands from existing objects, you can control the output format using `CommandGenerationOptions`:
+
+```csharp
+// Generate with aliases instead of full property names
+var options = new CommandGenerationOptions(preferAliases: true);
+var cmd = RecordCommandRegistry<MyData>.GenerateCommand(record, options);
+
+// Generate with named arguments instead of positional properties
+var options = new CommandGenerationOptions(usePositionalProperties: false);
+var cmd = RecordCommandRegistry<MyData>.GenerateCommand(record, options);
+
+// Include default values in the generated command
+var options = new CommandGenerationOptions(ignoreDefaultValues: false);
+var cmd = RecordCommandRegistry<MyData>.GenerateCommand(record, options);
+```
+
+### Generating Usage Examples
+
+RecordCommander can generate usage examples for your registered commands:
+
+```csharp
+// Get a basic usage example
+string example = RecordCommandRegistry<MyData>.GetUsageExample<Country>();
+// Output: "add country <Code> <Name> <SpokenLanguages>"
+
+// Get a detailed usage example with parameter descriptions
+string detailed = RecordCommandRegistry<MyData>.GetDetailedUsageExample<Country>();
+// Output includes parameter types and descriptions
+```
+
+This is particularly useful for documentation or CLI help text.
+
+### Enum and Flags Support
+
+RecordCommander handles both regular enums and flags enums:
+
+```csharp
+// Using a regular enum
+RecordCommandRegistry.Run(context, "add book 978-1234567890 \"My Book\" \"Jane Doe\" --Status=Borrowed");
+
+// Using a flags enum (combine multiple values with commas)
+RecordCommandRegistry.Run(context, "add book 978-1234567890 \"My Book\" \"Jane Doe\" --Flags=Fiction,Mystery,Romance");
+```
+
+### Default Value Handling
+
+RecordCommander respects the `DefaultValueAttribute` on properties:
+
+```csharp
+public class SampleRecord
+{
+    public string Id { get; set; }
+    
+    [DefaultValue(-1)]
+    public int Age { get; set; } = -1;
+    
+    [DefaultValue(true)]
+    public bool IsActive { get; set; } = true;
+}
+```
+
+When generating commands, properties with default values can be omitted:
+
+```csharp
+var record = new SampleRecord { Id = "123", Name = "Alice" };
+var cmd = RecordCommandRegistry<MyData>.GenerateCommand(record);
+// Age and IsActive won't appear in the command if they have default values
+```
+
 ## Use Cases
 
 ### AI
