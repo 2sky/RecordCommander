@@ -14,6 +14,10 @@ RecordCommander is a C# library that enables you to create, update, and manage r
 - **Data Seeding & Import/Export:** Ideal for seeding data, providing sample data for documentation, or integrating with external systems.
 - **JSON–Like Parsing:** Supports complex property values (including arrays) with JSON–like syntax.
 - **No External Dependencies:** Uses only the default Microsoft libraries.
+- **Aliases & Short Names:** Apply `[Alias]` on classes or properties to use shorter command tokens.
+- **Custom Commands & Method Calls:** Extend the registry with `RegisterCommand` or call object methods via `--Method:arg=value`.
+- **Usage Generation:** Generate commands, usage examples and prompts for custom commands.
+- **Custom Converters & Enum/Flags Support:** Register converters for your types and work with enums or flag combinations.
 
 ## Getting Started
 
@@ -256,6 +260,28 @@ string detailed = RecordCommandRegistry<MyData>.GetDetailedUsageExample<Country>
 ```
 
 This is particularly useful for documentation or CLI help text.
+
+### Custom Command Prompts
+
+`GetCustomCommandPrompt` can generate usage text for a custom command and even include parameter descriptions:
+
+```csharp
+string prompt = RecordCommandRegistry<TestContext>.GetCustomCommandPrompt("log4");
+// log4 <log> <x> <y> <z> <ts> <g>
+
+string detailed = RecordCommandRegistry<TestContext>.GetCustomCommandPrompt("log4", true);
+/*
+log4 <log> <x> <y> <z> <ts> <g>
+#   log : string (quoted if contains spaces) - Message to log
+#   x : date (format yyyy-MM-dd)
+#   y : date (format yyyy-MM-dd)
+#   z : number
+#   ts : timespan
+#   g : guid
+*/
+```
+
+This is helpful when building CLI help text for custom operations.
 
 ### Enum and Flags Support
 
