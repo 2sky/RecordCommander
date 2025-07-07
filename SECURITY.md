@@ -1,7 +1,7 @@
 # Security Policy
 
 ## Supported Versions
-The current release branch is actively maintained. Older versions are not supported with security fixes.
+The latest stable version on NuGet is actively maintained with security fixes. Older versions are not supported.
 
 ## Reporting a Vulnerability
 If you find a security vulnerability, please open an issue on GitHub or contact the maintainers privately.
