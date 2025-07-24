@@ -54,3 +54,19 @@ Tests use xUnit and are located in RecordCommander.Tests. The test project provi
 - Alias resolution
 - Command generation
 - Custom converters and method mapping
+
+## Development Practices
+
+### Version Control
+
+- This project uses **Conventional Commits** for commit messages
+- Format: `type(scope): description` or `type: description`
+- Common types: `feat`, `fix`, `docs`, `test`, `build`, `chore`, `refactor`
+- Version tags are applied to commits that update the version (e.g., commit with message `build: v0.17.0` also updates the version in the .csproj file)
+
+### Release Process
+
+1. Update version in `RecordCommander/RecordCommander.csproj`
+2. Update `CHANGELOG.md` with all commits since the last version tag
+3. Commit with message `build: vX.Y.Z`
+4. Tag the commit with `vX.Y.Z`
