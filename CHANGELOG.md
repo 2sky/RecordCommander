@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+## [1.0.0] - 2025-11-26
+
+### Added
+
+- .NET 10 support
+
+### Dependencies
+
+- Updated System.Text.Json to 10.0.0
+
 ## [0.17.0] - 2025-03-05
 
 ### Added

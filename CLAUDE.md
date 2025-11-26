@@ -41,8 +41,9 @@ RecordCommander is a lightweight C# library for command-based record management.
 ### Multi-Targeting
 
 The library targets multiple frameworks:
+- .NET 10.0
 - .NET 9.0
-- .NET 8.0  
+- .NET 8.0
 - .NET Standard 2.0 (includes System.Text.Json dependency)
 
 ### Testing
