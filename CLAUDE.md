@@ -37,74 +37,61 @@ Other notes:
 
 ## Architecture
 
-A command string like `add country be Belgium --SpokenLanguages=['nl','fr']` is tokenized, routed to a registration, and applied to a record found-or-created inside a caller-supplied context object. There is no runtime, no DI, no I/O — everything is static state plus reflection.
+A command string like `add country be Belgium --SpokenLanguages=['nl','fr']` is tokenized, routed to
+a registration, and applied to a record found-or-created inside a caller-supplied context object.
+There is no runtime, no DI, no I/O — everything is static state plus reflection.
 
-### One static registry per TContext
+Per-domain depth lives in the living specs (see below); these three facts apply to any change:
 
-`RecordCommandRegistry<TContext>` (`static partial`) holds *all* state in static fields: `_registrations`, `_extraCommands`, `_customConverters`, `_customConverterTypeDescriptions`. Registration is process-global for the lifetime of the AppDomain and there is **no unregister or reset**.
+- **One static registry per `TContext`, with no unregister or reset.** `RecordCommandRegistry<TContext>`
+  (`static partial`) holds all state in static fields, process-global for the AppDomain's lifetime.
+  This shapes the tests: `RecordCommanderTests` registers everything in a static constructor guarded
+  by `IsRegistered("language")` plus per-block `try/catch`. New tests must reuse the existing
+  `TestContext` registrations or introduce a *different* context type — re-registering with different
+  metadata silently overwrites for every other test.
+- **Two same-named `Helpers`.** `RecordCommandRegistry.cs` and `RecordCommandRegistry.Generation.cs`
+  each declare their own `file static class Helpers` with disjoint members, invisible to each other.
+  Adding a helper means choosing a file, not extending a shared class.
+- **netstandard2.0 is a target.** Modern APIs need an `#if NET8_0_OR_GREATER` / `#else` pair — the
+  files are full of them: `ArgumentNullException.ThrowIfNull`, range/index syntax,
+  `StartsWith(char)`, `Enum.TryParse(Type, ...)`, `DateOnly`, `string.Join(char, ...)`. Match the
+  surrounding pattern rather than raising the floor. `netstandard2.0` also pulls in
+  `System.Text.Json` as a package reference; the other targets use the built-in one.
 
-This shapes the tests: `RecordCommanderTests` does every registration in a static constructor guarded by `IsRegistered("language")` plus per-block `try/catch`. New tests must reuse the existing `TestContext` registrations or introduce a *different* context type — re-registering with different metadata silently overwrites for every other test.
+The non-generic `RecordCommandRegistry` is a thin forwarding facade over the generic one. Put real
+logic in `RecordCommandRegistry<TContext>`.
 
-The non-generic `RecordCommandRegistry` is a thin forwarding facade (`Register`/`Run`/`RunMany`) over the generic one. Put real logic in `RecordCommandRegistry<TContext>`.
+## Domain Documentation (Living Specs)
 
-### Partial-class split, and two same-named Helpers
+Each domain has a **living spec** paired with a **priming skill**, indexed in
+[`docs/README.md`](docs/README.md):
 
-- `RecordCommandRegistry.cs` — registration, `Run`/`RunMany`, `ConvertToType`, nested `CustomCommand`
-- `RecordCommandRegistry.Generation.cs` — `GenerateCommand`, `GetUsageExample`/`GetDetailedUsageExample`, `GetCustomCommandPrompt`
+- **Living spec** `docs/<domain>.md` — deep, human-facing current-state doc (entities, invariants,
+  key files, gotchas, and the tests that pin each rule).
+- **Priming skill** `.claude/skills/<domain>/SKILL.md` — thin, agent-facing; loads the essentials
+  fast and links *down* to the spec.
 
-Each file declares its **own** `file static class Helpers` with disjoint members (tokenizing/expression parsing in the first, alias/default-value/stringification in the second). They are not visible to each other; adding a helper means choosing a file, not extending a shared class.
+Start from the **domain index** in [`docs/README.md`](docs/README.md). The current domains are
+[`commands`](docs/commands.md) (registration, tokenizing, the `add` grammar, custom commands),
+[`conversion`](docs/conversion.md) (the string→CLR fallback ladder and custom converters), and
+[`generation`](docs/generation.md) (emitting commands, usage examples, prompts). Read the relevant
+spec **before** changing behavior in its area — the fallback-ladder order and the tokenizer contract
+are both load-bearing in ways the code does not announce.
 
-### Two registration shapes, one registration type
+**Same-PR sync rule:** any change to a domain's behavior updates its living spec **in the same PR**
+as the code change — never as a follow-up. If the change alters a load-bearing invariant, update the
+priming skill too. A domain-behavior diff with no matching spec edit is incomplete.
 
-`RecordRegistration<TContext, TRecord>` accepts either:
-1. `collectionAccessor: ctx => ctx.Languages` (`IList<TRecord>`) — find by linear scan, create via `Activator.CreateInstance` + `collection.Add`
-2. a `findRecord`/`createRecord` delegate pair — for records not held in a plain list (see `TestContext.Books`, an `ICollection`)
+Auditing and adding domains is handled by the user-level `domain-priming` skill.
 
-Both collapse into two private delegates, so `Run` never knows which mode was used. The abstract base `RecordRegistration<TContext>` holds the reflection metadata: `UniqueKeyProperty`, `PositionalProperties`, `NonPositionalProperties`, and `AllProperties` (case-insensitive, includes property `[Alias]` names).
+## Ubiquitous Language
 
-The unique key must be a `string` and is matched `OrdinalIgnoreCase`. Non-string keys are unsupported (see TODO in `RecordRegistration´2.cs`).
-
-Class-level `[Alias]` and `AddAlias` add *extra keys into the same `_registrations` dictionary* pointing at the same registration — there is no separate alias lookup layer.
-
-### Command grammar
-
-```
-add <record> <uniqueKey> [positional...] [--Prop=value] [--Method:arg=value]
-```
-
-- Token 0 other than `add` is looked up in `_extraCommands` (`RegisterCommand`); `"add"` is a reserved command name.
-- `Helpers.Tokenize` handles `'` and `"` quoting with backslash escapes inside quotes; a closing quote always ends the token.
-- Positional args fill `PositionalProperties` in order; surplus positional args are silently ignored.
-- `--Prop=value` resolves against `AllProperties` (case-insensitive, aliases included).
-- `--Name:arg=value` is a **method call**: matches a method named `Name` or `Set` + `Name`, requires exactly 2 parameters, prefers the exact-name match, and converts both the key-side arg and the value.
-- `RunMany` splits on newlines, skipping blank lines and lines starting with `#`.
-- Custom commands (`RegisterCommand`) require `TContext` as the first parameter; trailing parameters may have defaults, and `CustomCommand` computes `RequiredParams` as the leading run of non-defaulted parameters.
-
-### ConvertToType fallback order (load-bearing)
-
-nullable unwrap (empty string → `null`) → `string` → array → enum → **custom converters** → `DateTime`/`DateOnly` (exact `yyyy-MM-dd`) / `TimeSpan` / `Guid` → registered record type → `Convert.ChangeType` (InvariantCulture).
-
-Consequences worth knowing before editing:
-- Custom converters are consulted **before** the built-in date/guid handling, which is how a caller overrides them.
-- Array values must be bracketed. `ConvertToType` normalizes three forms to JSON before
-  `System.Text.Json` deserializes: `["a","b"]`, `['a','b']`, and bare `[a,b]`. Unbracketed input throws.
-- `Tokenize` cooperates with this: quotes protect whitespace but never terminate a token (adjacent
-  quoted sections concatenate, as in a shell), and whitespace inside `[...]` is preserved via a
-  bracket-depth counter. That is what makes `--SpokenLanguages=["fi", "sv"]` survive as one token.
-  Both behaviors are load-bearing for the README's "paste AI output" use case and are covered by
-  tests — before they existed, every inline-quoted array threw.
-- A property typed as another *registered* record resolves via `FindRecord` on the unique key and
-  yields `null` when absent (no create, no error).
-
-### Generation is the inverse — and deliberately asymmetric
-
-`GenerateCommand` walks `AllProperties`, skips nulls and defaults (`[DefaultValue]` wins over `default(T)`), maps registered record-typed values back to their unique key, emits positionals in registration order but **stops at the first missing one** (remaining properties become `--named` args).
-
-`Helpers.ConvertValueToString` quotes only when the value contains a space and does **not** escape embedded quotes (TODO in code), so round-tripping generate→parse is not guaranteed for such values. `GetTypeDescription` also does not yet expand `[Flags]` enums.
-
-### netstandard2.0 constraint
-
-Modern APIs need an `#if NET8_0_OR_GREATER` / `#else` pair — the file is full of them: `ArgumentNullException.ThrowIfNull`, range/index syntax, `StartsWith(char)`, `Enum.TryParse(Type, ...)`, `DateOnly`, `string.Join(char, ...)`. Match the surrounding pattern rather than raising the floor. `netstandard2.0` also pulls in `System.Text.Json` as a package reference; the other targets use the built-in one.
+[`UBIQUITOUS_LANGUAGE.md`](UBIQUITOUS_LANGUAGE.md) is the canonical domain glossary — the agreed
+vocabulary for registration, the command grammar, conversion, and generation. Use these terms in
+code, comments, XML docs, and the README; consult its "Flagged ambiguities" before naming new
+concepts (notably **command** — the line vs. the `add` verb vs. a custom command; **alias** — record
+vs. property; **default value** — declared vs. type default; and **Helpers** — never one class).
+Update it when introducing or renaming a domain concept.
 
 ## Conventions
 
