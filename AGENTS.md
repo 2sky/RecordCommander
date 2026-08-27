@@ -5,6 +5,7 @@
 - Prefer `var` for local variables when the type is clear.
 - Keep braces on the same line as declarations.
 - After changing any files, run `dotnet test` from the repository root.
+  (This needs the `global.json` runner opt-in — see CLAUDE.md before changing test tooling.)
 - Commit messages use the format `scope: summary` (e.g. `feat: add logging`).
 - Follow standard C# naming conventions:
   - Use `PascalCase` for class names, method names, properties, and public fields.

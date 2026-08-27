@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
+### Fixed
+
+- Inline array values are parsed again: `--SpokenLanguages=['nl','fr']` and `--SpokenLanguages=["fi", "sv"]` previously threw, because a closing quote terminated the token and whitespace split it. Quotes now protect whitespace without ending a token, and whitespace inside brackets is preserved, so AI-generated command output runs as pasted.
+
+### Changed
+
+- Test project migrated to xUnit v3 running on Microsoft.Testing.Platform; `dotnet test` now requires the runner opt-in in `global.json`
+- Test and sample projects target .NET 10, and `LangVersion` raised to 14
+
+### Removed
+
+- Renovate configuration, which is no longer available on the GitHub organization
+
+### Tests
+
+- Regression tests for both quote styles, spaced array elements, empty quoted arguments, adjacent quoted sections, and the README's AI-generated command block
+
+### Dependencies
+
+- Updated System.Text.Json to 10.0.11
+- Replaced coverlet.collector, Microsoft.NET.Test.Sdk and xunit.runner.visualstudio with xunit.v3 4.0.0 and Microsoft.Testing.Extensions.CodeCoverage 18.10.0
+
 ## [1.0.0] - 2025-11-26
 
 ### Added

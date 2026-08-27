@@ -6,12 +6,34 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - **Build**: `dotnet build`
 - **Test**: `dotnet test`
-- **Run single test**: `dotnet test --filter "FullyQualifiedName~RecordCommanderTests.AddLanguage_ValidInput_ShouldCreateLanguageRecord"`
+- **Run single test**: `dotnet test --filter-method "*AddCountry_SpokenLanguages_SingleQuotedInlineArray"`
+- **Coverage**: `dotnet test --coverage --coverage-output-format cobertura --coverage-output cov.cobertura.xml` (report lands in `TestResults/` at the repo root)
 - **Package**: `dotnet pack` (also happens on every build — `GeneratePackageOnBuild=true`)
 
-Notes:
-- The test project targets **net9.0 only**, so `dotnet test` never exercises the `netstandard2.0` code paths even though `dotnet build` compiles them.
-- The `netstandard2.0` build emits a pre-existing `CS8601` warning at `RecordCommander/RecordCommandRegistry.cs:310` — not introduced by your change.
+`dotnet test` only works because of the `global.json` at the repository root:
+
+```json
+{ "test": { "runner": "Microsoft.Testing.Platform" } }
+```
+
+The test project is xUnit v3 on Microsoft.Testing.Platform **v2**, and MTP v2 removed the old
+VSTest bridge: its MSBuild targets hard-error with "Testing with VSTest target is no longer
+supported" if `dotnet test` routes through the VSTest target. That opt-in is what selects the
+MTP-native `dotnet test` instead, so **deleting `global.json` breaks testing entirely** — and do
+not "fix" such a failure by reverting to VSTest or by setting
+`TestingPlatformDotnetTestSupport` (the v1-era bridge, which MTP v2 rejects).
+
+MTP options pass straight through `dotnet test` with no `--` separator. Running the test binary
+directly also works and takes the same options, which is useful when bypassing MSBuild:
+`dotnet run --project RecordCommander.Tests -- --coverage`.
+
+Other notes:
+- The test project targets **net10.0 only**, so the `netstandard2.0` code paths are compiled by
+  `dotnet build` but never executed by the tests.
+- The `netstandard2.0` build emits a pre-existing `CS8601` warning at
+  `RecordCommander/RecordCommandRegistry.cs:310` — not introduced by your change.
+- Coverage is 92.2% line / 88.1% branch. The weak spot is the non-generic `RecordCommandRegistry`
+  facade (45% lines) — its forwarding overloads are mostly unexercised.
 
 ## Architecture
 
@@ -64,8 +86,15 @@ nullable unwrap (empty string → `null`) → `string` → array → enum → **
 
 Consequences worth knowing before editing:
 - Custom converters are consulted **before** the built-in date/guid handling, which is how a caller overrides them.
-- Array values must be bracketed; three forms are normalized to JSON before `System.Text.Json` deserializes: `["a","b"]`, `['a','b']`, and bare `[a,b]`. Unbracketed input throws.
-- A property typed as another *registered* record resolves via `FindRecord` on the unique key and yields `null` when absent (no create, no error).
+- Array values must be bracketed. `ConvertToType` normalizes three forms to JSON before
+  `System.Text.Json` deserializes: `["a","b"]`, `['a','b']`, and bare `[a,b]`. Unbracketed input throws.
+- `Tokenize` cooperates with this: quotes protect whitespace but never terminate a token (adjacent
+  quoted sections concatenate, as in a shell), and whitespace inside `[...]` is preserved via a
+  bracket-depth counter. That is what makes `--SpokenLanguages=["fi", "sv"]` survive as one token.
+  Both behaviors are load-bearing for the README's "paste AI output" use case and are covered by
+  tests — before they existed, every inline-quoted array threw.
+- A property typed as another *registered* record resolves via `FindRecord` on the unique key and
+  yields `null` when absent (no create, no error).
 
 ### Generation is the inverse — and deliberately asymmetric
 
@@ -79,7 +108,7 @@ Modern APIs need an `#if NET8_0_OR_GREATER` / `#else` pair — the file is full 
 
 ## Conventions
 
-- Code style lives in `AGENTS.md` (4-space indent, file-scoped namespaces, XML docs on public APIs). Run `dotnet test` after changes.
+- Code style lives in `AGENTS.md` (4-space indent, file-scoped namespaces, XML docs on public APIs).
 - Commits use **Conventional Commits** (`feat:`, `fix:`, `docs:`, `test:`, `build:`, `chore:`, `refactor:`).
 - `README.md` is the user-facing feature documentation *and* is packed into the NuGet package — update it when adding or changing a public feature.
 
