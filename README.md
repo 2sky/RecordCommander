@@ -146,6 +146,31 @@ You can use named arguments to update properties of an existing record. For exam
 RecordCommandRegistry.Run(context, "add country be --SpokenLanguages=['nl','fr']");
 ```
 
+### Array Values
+
+Array properties are written as a bracketed list. Quoting is optional and both quote styles work,
+so all of these are equivalent:
+
+```csharp
+RecordCommandRegistry.Run(context, "add country be --SpokenLanguages=[nl,fr]");
+RecordCommandRegistry.Run(context, "add country be --SpokenLanguages=['nl','fr']");
+RecordCommandRegistry.Run(context, "add country be --SpokenLanguages=[\"nl\", \"fr\"]");
+```
+
+Whitespace inside the brackets is preserved as part of the value, so output pasted straight from an
+AI model runs as-is, and an individual element may contain spaces:
+
+```csharp
+RecordCommandRegistry.Run(context, "add country be --SpokenLanguages=['Dutch (Flemish)','French']");
+```
+
+An unbracketed value is rejected, since it is almost always a mistake:
+
+```csharp
+// throws ArgumentException: Value 'nl;fr' is not a valid array representation
+RecordCommandRegistry.Run(context, "add country be --SpokenLanguages=nl;fr");
+```
+
 ### Multiple Commands
 
 You can run multiple commands in a single string, separated by newlines. For example:

@@ -310,6 +310,89 @@ public class RecordCommanderTests
     }
 
     [Fact]
+    public void AddCountry_SpokenLanguages_SingleQuotedInlineArray()
+    {
+        var context = new TestContext();
+        RecordCommandRegistry.Run(context, "add country be Belgium --SpokenLanguages=['nl','fr']");
+
+        var country = context.Countries.Single();
+        Assert.Equal(new[] { "nl", "fr" }, country.SpokenLanguages);
+    }
+
+    [Fact]
+    public void AddCountry_SpokenLanguages_DoubleQuotedInlineArray()
+    {
+        var context = new TestContext();
+        RecordCommandRegistry.Run(context, "add country fi Finland --SpokenLanguages=[\"fi\", \"sv\"]");
+
+        var country = context.Countries.Single();
+        Assert.Equal(new[] { "fi", "sv" }, country.SpokenLanguages);
+    }
+
+    [Fact]
+    public void AddCountry_SpokenLanguages_FullyQuotedArrayValue()
+    {
+        var context = new TestContext();
+        RecordCommandRegistry.Run(context, "add country lu Luxembourg --SpokenLanguages=\"['lb','fr','de']\"");
+
+        var country = context.Countries.Single();
+        Assert.Equal(new[] { "lb", "fr", "de" }, country.SpokenLanguages);
+    }
+
+    [Fact]
+    public void AdjacentQuotedSections_FormASingleToken()
+    {
+        var context = new TestContext();
+        RecordCommandRegistry.Run(context, "add book 978-0 \"The \"\"Great\"\" Book\" \"Jane Doe\"");
+
+        var book = context.Books.Single();
+        Assert.Equal("The Great Book", book.Title);
+        Assert.Equal("Jane Doe", book.Author);
+    }
+
+    [Fact]
+    public void EmptyQuotedArgument_IsPreservedAsToken()
+    {
+        var context = new TestContext();
+        RecordCommandRegistry.Run(context, "add sr s1 Alice");
+        RecordCommandRegistry.Run(context, "add sr s1 \"\"");
+
+        var sample = context.Samples.Single();
+        Assert.Equal(string.Empty, sample.Name);
+    }
+
+    [Fact]
+    public void AddCountry_SpokenLanguages_ElementContainingSpaces()
+    {
+        var context = new TestContext();
+        RecordCommandRegistry.Run(context, "add country be Belgium --SpokenLanguages=['Dutch (Flemish)','French']");
+
+        var country = context.Countries.Single();
+        Assert.Equal(new[] { "Dutch (Flemish)", "French" }, country.SpokenLanguages);
+    }
+
+    [Fact]
+    public void RunMany_AiGeneratedCountryList_WithSpacedInlineArrays()
+    {
+        var context = new TestContext();
+
+        // Copied from the README's AI-generated example, including the spaces inside the
+        // arrays that a model naturally emits and the mix of single and double quotes.
+        RecordCommandRegistry.RunMany(context, """
+                                               add country FI "Finland" --SpokenLanguages=["fi", "sv"]
+                                               add country IE "Ireland" --SpokenLanguages=["en", "ga"]
+                                               add country LU "Luxembourg" --SpokenLanguages=["lb", "fr", "de"]
+                                               add country BE "Belgium" --SpokenLanguages=['nl','fr']
+                                               """);
+
+        Assert.Equal(4, context.Countries.Count);
+        Assert.Equal(new[] { "fi", "sv" }, context.Countries.Single(c => c.Code == "FI").SpokenLanguages);
+        Assert.Equal(new[] { "en", "ga" }, context.Countries.Single(c => c.Code == "IE").SpokenLanguages);
+        Assert.Equal(new[] { "lb", "fr", "de" }, context.Countries.Single(c => c.Code == "LU").SpokenLanguages);
+        Assert.Equal(new[] { "nl", "fr" }, context.Countries.Single(c => c.Code == "BE").SpokenLanguages);
+    }
+
+    [Fact]
     public void AddBook_ValidInput()
     {
         var context = new TestContext();

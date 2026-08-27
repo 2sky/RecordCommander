@@ -696,6 +696,10 @@ file static class Helpers
     /// <summary>
     /// A simple tokenizer that splits a command string into tokens.
     /// Supports quotes (single or double) and simple escape sequences.
+    /// Only whitespace separates tokens; quotes protect whitespace but do not end a token,
+    /// so a quoted section can be embedded in a larger token (as a shell would do).
+    /// Whitespace inside brackets is also protected, so that an inline array value such as
+    /// --SpokenLanguages=["fi", "sv"] survives as a single token.
     /// </summary>
     public static List<string> Tokenize(string input)
     {
@@ -704,8 +708,12 @@ file static class Helpers
 
         var tokens = new List<string>();
         var current = new StringBuilder();
+        // Set when the current token contained a quoted section, so that an explicitly
+        // empty value (e.g. --Name="") is still emitted as a token.
+        var quoted = false;
         var inQuotes = false;
         var quoteChar = '\0';
+        var bracketDepth = 0;
 
         for (var i = 0; i < input.Length; i++)
         {
@@ -713,11 +721,7 @@ file static class Helpers
             if (inQuotes)
             {
                 if (c == quoteChar)
-                {
                     inQuotes = false;
-                    tokens.Add(current.ToString());
-                    current.Clear();
-                }
                 else if (c == '\\' && i + 1 < input.Length)
                 {
                     i++;
@@ -731,21 +735,30 @@ file static class Helpers
                 if (c is '"' or '\'')
                 {
                     inQuotes = true;
+                    quoted = true;
                     quoteChar = c;
                 }
-                else if (char.IsWhiteSpace(c))
+                else if (char.IsWhiteSpace(c) && bracketDepth == 0)
                 {
-                    if (current.Length > 0)
+                    if (current.Length > 0 || quoted)
                     {
                         tokens.Add(current.ToString());
                         current.Clear();
+                        quoted = false;
                     }
                 }
                 else
+                {
+                    if (c is '[')
+                        bracketDepth++;
+                    else if (c is ']' && bracketDepth > 0)
+                        bracketDepth--;
+
                     current.Append(c);
+                }
             }
         }
-        if (current.Length > 0)
+        if (current.Length > 0 || quoted)
             tokens.Add(current.ToString());
         return tokens;
     }
