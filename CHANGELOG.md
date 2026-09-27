@@ -6,9 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [Unreleased]
 
-### Fixed
-
-- Inline array values are parsed again: `--SpokenLanguages=['nl','fr']` and `--SpokenLanguages=["fi", "sv"]` previously threw, because a closing quote terminated the token and whitespace split it. Quotes now protect whitespace without ending a token, and whitespace inside brackets is preserved, so AI-generated command output runs as pasted.
+## [1.0.1] - 2026-09-27
 
 ### Changed
 
@@ -19,6 +17,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Removed
 
 - Renovate configuration, which is no longer available on the GitHub organization
+
+### Fixed
+
+- Inline array values are parsed again: `--SpokenLanguages=['nl','fr']` and `--SpokenLanguages=["fi", "sv"]` previously threw, because a closing quote terminated the token and whitespace split it. Quotes now protect whitespace without ending a token, and whitespace inside brackets is preserved, so AI-generated command output runs as pasted.
+
+### Documentation
+
+- Per-domain living specs (`docs/`) for commands, conversion and generation, with matching agent priming skills
+- Ubiquitous-language glossary (`UBIQUITOUS_LANGUAGE.md`)
+- `CLAUDE.md` rewritten with architecture notes, test commands, tooling traps and coverage
 
 ### Tests
 
