@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Test project migrated to xUnit v3 running on Microsoft.Testing.Platform; `dotnet test` now requires the runner opt-in in `global.json`
 - Test and sample projects target .NET 10, and `LangVersion` raised to 14
+- `global.json` pins the .NET 10 SDK (`rollForward: latestFeature`), so builds no longer pick up a newer preview SDK
 
 ### Removed
 
@@ -25,8 +26,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Dependencies
 
-- Updated System.Text.Json to 10.0.11
-- Replaced coverlet.collector, Microsoft.NET.Test.Sdk and xunit.runner.visualstudio with xunit.v3 4.0.0 and Microsoft.Testing.Extensions.CodeCoverage 18.10.0
+- Updated System.Text.Json to 10.0.12
+- Replaced coverlet.collector, Microsoft.NET.Test.Sdk and xunit.runner.visualstudio with xunit.v3 4.0.1 and Microsoft.Testing.Extensions.CodeCoverage 18.11.2
 
 ## [1.0.0] - 2025-11-26
 

@@ -13,8 +13,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 `dotnet test` only works because of the `global.json` at the repository root:
 
 ```json
-{ "test": { "runner": "Microsoft.Testing.Platform" } }
+{
+  "sdk": { "version": "10.0.100", "rollForward": "latestFeature" },
+  "test": { "runner": "Microsoft.Testing.Platform" }
+}
 ```
+
+The `sdk` pin keeps builds on the newest installed .NET 10 SDK rather than a newer preview SDK.
 
 The test project is xUnit v3 on Microsoft.Testing.Platform **v2**, and MTP v2 removed the old
 VSTest bridge: its MSBuild targets hard-error with "Testing with VSTest target is no longer
